@@ -42,10 +42,8 @@ public class LengthBlock {
 
         long val = 0;
         for (int i = 0; i < block.length; i++) {
-            // shift val to the left by 1 byte
-            val = val << 8;
-            // insert the 1 bits with an 'or' operation
-            val = val | block[i];
+            // shift val to the left by 1 byte and treat the incoming byte as unsigned
+            val = (val << 8) | (block[i] & 0xFFL);
         }
 
         return val;
@@ -62,7 +60,7 @@ public class LengthBlock {
         byte[] block = new byte[sizeOfBlock];
         for (int i = sizeOfBlock; i > 0; i--) {
             block[i-1] = (byte) (value & 0xFF); // get the 8 bits on the right end (big endian means the least significant bits are on the right)
-            value = value >> 8;
+            value = value >>> 8;
         }
 
         return block;

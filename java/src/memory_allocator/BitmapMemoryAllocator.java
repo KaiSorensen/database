@@ -93,7 +93,7 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
 
         byte[] lengthBlock = new byte[(int) BLOCK_SIZE]; // this cast is always okay because block_size can't be more than 8
         for (int i = 0; i < BLOCK_SIZE; i++) {
-            lengthBlock[i] = dataFile.readByte();
+            lengthBlock[i] = (byte) dataFile.readUnsignedByte();
         }
         LengthBlock dataLengthBytes = new LengthBlock(lengthBlock);
         long datalength = dataLengthBytes.getLong();
@@ -104,7 +104,7 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
         /** NOTE: THE FUNDAMENTAL DATA LENGTH LIMITATION COMES FROM JAVA ARRAY INDEXING */  
         byte[] data = new byte[(int) datalength]; // another fundamental limitation: you can't have a java array bigger than an integer?
         for (int i = 0; i < datalength; i++) {
-            data[i] = dataFile.readByte();
+            data[i] = (byte) dataFile.readUnsignedByte();
         }
 
         return data;
