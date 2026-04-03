@@ -13,7 +13,7 @@ import java.io.IOException;
  * allocated space, followed by the payload bytes. Higher layers therefore only need to retain the
  * starting address returned by {@link #create(byte[])}.</p>
  */
-public interface MemoryAllocator extends AutoCloseable {
+public interface MemoryAllocatorInterface extends AutoCloseable {
 
     /**
      * Opens any backing files and prepares allocator metadata for use.

@@ -11,7 +11,7 @@ import java.nio.file.Path;
  * <p>This class owns two files inside a database folder:
  * one for the raw data payloads and one for the bitmap that tracks allocated space.</p>
  */
-public class BitmapMemoryAllocator implements MemoryAllocator {
+public class BitmapMemoryAllocator implements MemoryAllocatorInterface {
     private static final String DATA_FILE_NAME = "data.bin";
     private static final String BITMAP_FILE_NAME = "bitmap.bin";
 
@@ -53,10 +53,7 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
             throw new IllegalArgumentException("data array cannot be null"); // shouldn't ever happen
         }
 
-        // add one block size for storing the length of the data as metadata
-        long totalBytesNeeded = BLOCK_SIZE + (long) data.length;
-        // add block_size - 1 because we want it to round up to the nearest block if there is a fractional remainder at the end of the data
-        long blocksNeeded = (totalBytesNeeded +  BLOCK_SIZE - (long)1) / BLOCK_SIZE;
+        long blocksNeeded = getBlocksNeededForLength(data.length);
 
         long startBit = findNextAvailableSequence(blocksNeeded);
         // again, round up to be safe (by adding block_size - 1), but this should always be an even division until the block size is changed
@@ -72,8 +69,8 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
         long startByte = startBit * BLOCK_SIZE;
         // move the cursor to the position of the starting byte
         dataFile.seek(startByte);
-        // write the data at that location
-        dataFile.writeInt(data.length);
+        // write the data at that location (excuse the casting)
+        writeStoredLength(data.length);
         dataFile.write(data);
         // update the bitmap to reflect the presence of the new data
         bitmap.set(startBit, startBit + blocksNeeded);
@@ -86,19 +83,8 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
     public byte[] read(long address) throws IOException {
         ensureInitialized();
 
-        if (address > dataFile.length() - BLOCK_SIZE) throw new IOException("somehow the address is beyond the file");
-        // if somehow the specified data length is beyond the file
-
-        dataFile.seek(address);
-
-        byte[] lengthBlock = new byte[(int) BLOCK_SIZE]; // this cast is always okay because block_size can't be more than 8
-        for (int i = 0; i < BLOCK_SIZE; i++) {
-            lengthBlock[i] = (byte) dataFile.readUnsignedByte();
-        }
-        LengthBlock dataLengthBytes = new LengthBlock(lengthBlock);
-        long datalength = dataLengthBytes.getLong();
-
-        if (address + datalength + BLOCK_SIZE > dataFile.length()) throw new IOException("somehow the data length goes beyond the file");
+        long datalength = readStoredLength(address);
+        dataFile.seek(address + BLOCK_SIZE);
 
 
         /** NOTE: THE FUNDAMENTAL DATA LENGTH LIMITATION COMES FROM JAVA ARRAY INDEXING */  
@@ -112,22 +98,88 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
 
     @Override
     public long update(long address, byte[] newData) throws IOException {
-        throw new UnsupportedOperationException("update is not implemented yet");
+        ensureInitialized();
+        if (newData == null) {
+            throw new IllegalArgumentException("data array cannot be null");
+        }
+
+        long startBit = requireAllocatedStartBit(address);
+        long oldLength = readStoredLength(address);
+        long oldBlocksUsed = getBlocksNeededForLength(oldLength);
+        long newBlocksUsed = getBlocksNeededForLength(newData.length);
+
+        if (newBlocksUsed <= oldBlocksUsed) {
+            dataFile.seek(address);
+            writeStoredLength(newData.length);
+            dataFile.write(newData);
+            if (newBlocksUsed < oldBlocksUsed) {
+                bitmap.clear(startBit + newBlocksUsed, startBit + oldBlocksUsed);
+            }
+            return address;
+        }
+
+        long newAddress = create(newData);
+        delete(address);
+        return newAddress;
     }
 
     @Override
     public void delete(long address) throws IOException {
-        throw new UnsupportedOperationException("delete is not implemented yet");
+        ensureInitialized();
+
+        long startBit = requireAllocatedStartBit(address);
+        long dataLength = readStoredLength(address);
+        long blocksUsed = getBlocksNeededForLength(dataLength);
+        bitmap.clear(startBit, startBit + blocksUsed);
     }
 
     @Override
     public boolean isAllocated(long address) throws IOException {
-        throw new UnsupportedOperationException("isAllocated is not implemented yet");
+        ensureInitialized();
+
+        if (address < 0 || address % BLOCK_SIZE != 0) {
+            return false;
+        }
+
+        long startBit = address / BLOCK_SIZE;
+        long currentFileBlockCount = dataFile.length() / BLOCK_SIZE;
+        if (startBit >= currentFileBlockCount) {
+            return false;
+        }
+
+        if (!bitmap.get(startBit)) {
+            return false;
+        }
+
+        if (address > dataFile.length() - BLOCK_SIZE) {
+            return false;
+        }
+
+        long dataLength = readStoredLengthValueAt(address);
+        long blocksUsed = getBlocksNeededForLength(dataLength);
+        long endBitExclusive = startBit + blocksUsed;
+        if (endBitExclusive > currentFileBlockCount) {
+            return false;
+        }
+
+        for (long bit = startBit; bit < endBitExclusive; bit++) {
+            if (!bitmap.get(bit)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
     public int getLength(long address) throws IOException {
-        throw new UnsupportedOperationException("getLength is not implemented yet");
+        ensureInitialized();
+
+        long dataLength = readStoredLength(address);
+        if (dataLength > Integer.MAX_VALUE) {
+            throw new IOException("stored data length exceeds Java array limits");
+        }
+        return (int) dataLength;
     }
 
 
@@ -167,7 +219,7 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
         IOException thrown = null;
 
         try {
-            if (bitmapFile != null || dataFile != null) {
+            if (bitmapFile != null && dataFile != null && bitmap != null) {
                 flush();
             }
         } catch (IOException exception) {
@@ -232,6 +284,66 @@ public class BitmapMemoryAllocator implements MemoryAllocator {
         if (dataFile == null || bitmapFile == null || bitmap == null) {
             throw new IllegalStateException("Memory allocator has not been initialized");
         }
+    }
+
+    private long requireAllocatedStartBit(long address) throws IOException {
+        if (address < 0) {
+            throw new IOException("address cannot be negative");
+        }
+        if (address % BLOCK_SIZE != 0) {
+            throw new IOException("address must be aligned to the block size");
+        }
+        if (!isAllocated(address)) {
+            throw new IOException("address does not point to the start of an allocation");
+        }
+
+        return address / BLOCK_SIZE;
+    }
+
+    private long readStoredLength(long address) throws IOException {
+        requireAllocatedStartBit(address);
+        long dataLength = readStoredLengthValueAt(address);
+        if (dataLength < 0) {
+            throw new IOException("stored data length cannot be negative");
+        }
+        if (address + dataLength + BLOCK_SIZE > dataFile.length()) throw new IOException("somehow the data length goes beyond the file");
+
+        return dataLength;
+    }
+
+    private long readStoredLengthValueAt(long address) throws IOException {
+        if (address > dataFile.length() - BLOCK_SIZE) {
+            throw new IOException("somehow the address is beyond the file");
+        }
+
+        dataFile.seek(address);
+
+        byte[] lengthBlock = new byte[(int) BLOCK_SIZE];
+        for (int i = 0; i < BLOCK_SIZE; i++) {
+            lengthBlock[i] = (byte) dataFile.readUnsignedByte();
+        }
+
+        return new LengthBlock(lengthBlock).getLong();
+    }
+
+    private void writeStoredLength(long dataLength) throws IOException {
+        if (dataLength < 0) {
+            throw new IllegalArgumentException("dataLength cannot be negative");
+        }
+        if (dataLength > Integer.MAX_VALUE) {
+            throw new IOException("stored data length exceeds Java array limits");
+        }
+
+        dataFile.write(new LengthBlock(dataLength, (int) BLOCK_SIZE).getBytes());
+    }
+
+    private long getBlocksNeededForLength(long dataLength) {
+        if (dataLength < 0) {
+            throw new IllegalArgumentException("dataLength cannot be negative");
+        }
+
+        long totalBytesNeeded = BLOCK_SIZE + dataLength;
+        return (totalBytesNeeded + BLOCK_SIZE - (long)1) / BLOCK_SIZE;
     }
 
     // returns next available sequence of bits, returns -1 if it's equivalent to the end of the file (no available space)

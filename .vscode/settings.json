@@ -1,0 +1,5 @@
+{
+  "java.server.launchMode": "Standard",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.maven.enabled": true
+}

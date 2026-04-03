@@ -1,0 +1,11 @@
+/Users/kaisorensen/Code/database/java/src/crud_engine/CrudEngine.java
+/Users/kaisorensen/Code/database/java/src/crud_engine/CrudEngineInterface.java
+/Users/kaisorensen/Code/database/java/src/crud_engine/TypeByteConversions.java
+/Users/kaisorensen/Code/database/java/src/memory_allocator/BitmapMemoryAllocator.java
+/Users/kaisorensen/Code/database/java/src/memory_allocator/LengthBlock.java
+/Users/kaisorensen/Code/database/java/src/memory_allocator/LongBitMap.java
+/Users/kaisorensen/Code/database/java/src/memory_allocator/MemoryAllocatorInterface.java
+/Users/kaisorensen/Code/database/java/src/query_executor/DataManipulationFunctions.java
+/Users/kaisorensen/Code/database/java/src/token_classes/Keyword.java
+/Users/kaisorensen/Code/database/java/src/token_classes/Operator.java
+/Users/kaisorensen/Code/database/java/src/token_classes/Token.java
