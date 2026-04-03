@@ -1,5 +1,7 @@
 package crud_engine;
 
+import java.io.IOException;
+
 public interface CrudEngineInterface extends AutoCloseable {
 
     enum AttributeType {
@@ -7,29 +9,62 @@ public interface CrudEngineInterface extends AutoCloseable {
         INT,
         STRING,
         BOOL,
-    }
+    }  
+
+    // open questions:
+    /* 
+    -   At what level should filtering occur?
+    -   This layer will be responsible for all things that require database file interaction.
+        It will provide the abstraction over the actual database.
+        So, the layer above will decide how to take the parse tree and execute fitlers on specific data.
+        This layer will only allow you to choose which data you interact with, not how. It deals with all the addressing so that the layer above can focus on the query.
+        So, we need to give the above layer ability to access any stored data. The layer above decides what to do with it.
+        That means object-attribute control. Not anything past addressing the data.   
+    -   BIG QUESTION that I haven't explicily addressed:
+        If all the attributes are different files, how do we know what data goes in a row together? 
+        Ultimately, it must be by index. So, we need a way to indicate a null value so that it still has an address.
+        For strings, there's a designated byte for null. For integers, what shall we do? Signed? I don't know. For true/false? I don't know.
+    */
     
     // create object
-    
+    void createObject(String objectName) throws IOException;
 
     // delete object
+    void deleteObject(String objectName) throws IOException;
 
-    // extend object
+    // rename object (no update: you can only "update" the name)
+    void renameObject(String oldObjectName, String newObjectName) throws IOException;
 
-    // rename object
+    // create attribute
+    void createAttribute(String objectName, String attributeName, AttributeType attributeType)
+        throws IOException;
 
-    // add attribute
+    // delete attribute
+    void deleteAttribute(String objectName, String attributeName) throws IOException;
 
-    // remove attribute
+    // rename attribute (no update: you can only "update" the name)
+    void renameAttribute(String objectName, String oldAttributeName, String newAttributeName)
+        throws IOException;
 
-    // rename attribute 
+    // create data 
+    long createData(String objectName, String attributeName, byte[] data) throws IOException;
 
-    // insert data (very nuanced)
+    // read data
+    byte[] readData(String objectName, String attributeName) throws IOException;
 
-    // retrieve data (very nuanced)
+    // update data
+    long updateData(String objectName, String attributeName, byte[] data) throws IOException;
 
-    // filter?
+    // delete data
+    void deleteData(String objectName, String attributeName, long address) throws IOException;
 
     
+    // i'm not sure there's more to it. in what layer should we convert between bytes and types?
+    // should this class provide a different function for each type and perform the conversions? probably.
+    // each function would take an object and attribute column, then the data. we would know by the primitive type which one is being used
+    // so how inefficient is this? I feel like an operation on a whole column will take forever! we'll find out. either way, this is a weekend project.
+
+    @Override
+    void close() throws IOException;
     
 }
