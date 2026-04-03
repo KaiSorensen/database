@@ -1,6 +1,7 @@
 package crud_engine;
 
 import java.io.IOException;
+import java.util.UUID;
 
 public interface CrudEngineInterface extends AutoCloseable {
 
@@ -27,7 +28,7 @@ public interface CrudEngineInterface extends AutoCloseable {
     */
     
     // create object
-    void createObject(String objectName) throws IOException;
+    void createObject(String objectName, String parentObjectNameNullable) throws IOException;
 
     // delete object
     void deleteObject(String objectName) throws IOException;
@@ -36,27 +37,37 @@ public interface CrudEngineInterface extends AutoCloseable {
     void renameObject(String oldObjectName, String newObjectName) throws IOException;
 
     // create attribute
-    void createAttribute(String objectName, String attributeName, AttributeType attributeType)
-        throws IOException;
+    void createAttribute(String objectName, String attributeName, AttributeType attributeType) throws IOException;
 
     // delete attribute
     void deleteAttribute(String objectName, String attributeName) throws IOException;
 
     // rename attribute (no update: you can only "update" the name)
-    void renameAttribute(String objectName, String oldAttributeName, String newAttributeName)
-        throws IOException;
+    void renameAttribute(String objectName, String oldAttributeName, String newAttributeName) throws IOException;
 
-    // create data 
-    long createData(String objectName, String attributeName, byte[] data) throws IOException;
+    DatabaseSchema readSchema() throws IOException;
 
-    // read data
-    byte[] readData(String objectName, String attributeName) throws IOException;
+    int insertRow(String objectName) throws IOException;
 
-    // update data
-    long updateData(String objectName, String attributeName, byte[] data) throws IOException;
+    int getRowCount(String objectName) throws IOException;
 
-    // delete data
-    void deleteData(String objectName, String attributeName, long address) throws IOException;
+    void writeInt(String objectName, String attributeName, int rowIndex, Integer value) throws IOException;
+
+    Integer readInt(String objectName, String attributeName, int rowIndex) throws IOException;
+
+    void writeString(String objectName, String attributeName, int rowIndex, String value) throws IOException;
+
+    String readString(String objectName, String attributeName, int rowIndex) throws IOException;
+
+    void writeBool(String objectName, String attributeName, int rowIndex, Boolean value) throws IOException;
+
+    Boolean readBool(String objectName, String attributeName, int rowIndex) throws IOException;
+
+    void writeId(String objectName, String attributeName, int rowIndex, UUID value) throws IOException;
+
+    UUID readId(String objectName, String attributeName, int rowIndex) throws IOException;
+
+    void deleteRow(String objectName, int rowIndex) throws IOException;
 
     
     // i'm not sure there's more to it. in what layer should we convert between bytes and types?

@@ -1,5 +1,9 @@
+/Users/kaisorensen/Code/database/java/src/crud_engine/AttributeSchema.java
 /Users/kaisorensen/Code/database/java/src/crud_engine/CrudEngine.java
 /Users/kaisorensen/Code/database/java/src/crud_engine/CrudEngineInterface.java
+/Users/kaisorensen/Code/database/java/src/crud_engine/DatabaseSchema.java
+/Users/kaisorensen/Code/database/java/src/crud_engine/ObjectSchema.java
+/Users/kaisorensen/Code/database/java/src/crud_engine/TempBaseDemo.java
 /Users/kaisorensen/Code/database/java/src/crud_engine/TypeByteConversions.java
 /Users/kaisorensen/Code/database/java/src/memory_allocator/BitmapMemoryAllocator.java
 /Users/kaisorensen/Code/database/java/src/memory_allocator/LengthBlock.java
