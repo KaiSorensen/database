@@ -8,13 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import crud_engine.AttributeSchema;
 import crud_engine.CrudEngine;
 import crud_engine.CrudEngineInterface.AttributeType;
 import crud_engine.DatabaseSchema;
+import crud_engine.ObjectSchema;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import memory_allocator.BitmapMemoryAllocator;
@@ -238,6 +243,75 @@ public class CrudEngineTest {
     }
 
     @Test
+    void removeParentDecouplesChildSoFormerParentCanBeDeleted() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Mammals", null);
+            engine.createAttribute("Mammals", "Species", AttributeType.STRING);
+            engine.createObject("Giraffes", "Mammals");
+
+            engine.removeParent("Giraffes");
+            assertNull(engine.readSchema().getObjects().get("giraffes").getParentObjectName());
+
+            engine.deleteObject("Mammals");
+            assertFalse(engine.readSchema().getObjects().containsKey("mammals"));
+            assertTrue(engine.readSchema().getObjects().containsKey("giraffes"));
+        }
+    }
+
+    @Test
+    void addParentReattachesWhenChildAlreadyHasParentAttributes() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Mammals", null);
+            engine.createAttribute("Mammals", "Species", AttributeType.STRING);
+            engine.createAttribute("Mammals", "Has Fur", AttributeType.BOOL);
+            engine.createObject("Giraffes", "Mammals");
+
+            engine.removeParent("Giraffes");
+            engine.addParent("Giraffes", "Mammals");
+
+            assertEquals("mammals", engine.readSchema().getObjects().get("giraffes").getParentObjectName());
+        }
+    }
+
+    @Test
+    void addParentFailsWhenChildDoesNotAlreadyContainParentAttributes() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Mammals", null);
+            engine.createAttribute("Mammals", "Species", AttributeType.STRING);
+            engine.createObject("Birds", null);
+
+            IOException exception = assertThrows(IOException.class, () -> engine.addParent("Birds", "Mammals"));
+            assertTrue(exception.getMessage().contains("missing parent attribute"));
+        }
+    }
+
+    @Test
+    void addParentFailsWhenObjectAlreadyHasParent() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Animals", null);
+            engine.createAttribute("Animals", "Name", AttributeType.STRING);
+            engine.createObject("Mammals", "Animals");
+            engine.createObject("Giraffes", "Mammals");
+
+            IOException exception = assertThrows(IOException.class, () -> engine.addParent("Giraffes", "Animals"));
+            assertTrue(exception.getMessage().contains("already has a parent"));
+        }
+    }
+
+    @Test
+    void addParentFailsWhenItWouldCreateCycle() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Animals", null);
+            engine.createAttribute("Animals", "Name", AttributeType.STRING);
+            engine.createObject("Mammals", "Animals");
+            engine.createObject("Giraffes", "Mammals");
+
+            IOException exception = assertThrows(IOException.class, () -> engine.addParent("Animals", "Giraffes"));
+            assertTrue(exception.getMessage().contains("cycle"));
+        }
+    }
+
+    @Test
     void initializeFailsWhenAttributeFileIsMissing() throws Exception {
         Path dbRoot = tempDir.resolve("db");
 
@@ -251,6 +325,132 @@ public class CrudEngineTest {
         CrudEngine engine = new CrudEngine(dbRoot);
         IOException exception = assertThrows(IOException.class, engine::initialize);
         assertTrue(exception.getMessage().contains("Missing attribute file"));
+    }
+
+    @Test
+    void initializeFailsWhenSchemaVersionIsInvalid() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+        }
+
+        DatabaseSchema schema = readSchemaFile(dbRoot);
+        schema.setSchemaVersion(-1);
+        writeSchemaFile(dbRoot, schema);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Schema version must be positive"));
+    }
+
+    @Test
+    void initializeFailsWhenSchemaReferencesMissingParentObject() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Animals", null);
+            engine.createAttribute("Animals", "Name", AttributeType.STRING);
+            engine.createObject("Birds", "Animals");
+        }
+
+        DatabaseSchema schema = readSchemaFile(dbRoot);
+        schema.getObjects().get("birds").setParentObjectName("ghost_parent");
+        writeSchemaFile(dbRoot, schema);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Missing parent object"));
+    }
+
+    @Test
+    void initializeFailsWhenObjectDirectoryIsMissing() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+        }
+
+        Files.delete(dbRoot.resolve("metadata/objects/pets"));
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Missing object directory"));
+    }
+
+    @Test
+    void initializeFailsWhenSchemaObjectNameDoesNotMatchKey() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+        }
+
+        DatabaseSchema schema = readSchemaFile(dbRoot);
+        schema.getObjects().get("pets").setObjectName("animals");
+        writeSchemaFile(dbRoot, schema);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Schema object name mismatch"));
+    }
+
+    @Test
+    void initializeFailsWhenSchemaAttributeNameDoesNotMatchKey() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+            engine.createAttribute("Pets", "Name", AttributeType.STRING);
+        }
+
+        DatabaseSchema schema = readSchemaFile(dbRoot);
+        schema.getObjects().get("pets").getAttributes().get("name").setAttributeName("label");
+        writeSchemaFile(dbRoot, schema);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Schema attribute name mismatch"));
+    }
+
+    @Test
+    void initializeFailsWhenAttributeFileContainsInvalidAddressText() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+            engine.createAttribute("Pets", "Name", AttributeType.STRING);
+            engine.insertRow("Pets");
+        }
+
+        Files.write(
+            dbRoot.resolve("metadata/objects/pets/name.txt"),
+            List.of("not_a_number"),
+            StandardCharsets.UTF_8);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Invalid address line"));
+    }
+
+    @Test
+    void initializeFailsWhenAttributeFileContainsBlankAddressLine() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+            engine.createAttribute("Pets", "Name", AttributeType.STRING);
+            engine.insertRow("Pets");
+        }
+
+        Files.writeString(
+            dbRoot.resolve("metadata/objects/pets/name.txt"),
+            "\n",
+            StandardCharsets.UTF_8);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        IOException exception = assertThrows(IOException.class, engine::initialize);
+        assertTrue(exception.getMessage().contains("Blank address line"));
     }
 
     @Test
@@ -273,5 +473,15 @@ public class CrudEngineTest {
         BitmapMemoryAllocator allocator = new BitmapMemoryAllocator(dataRoot);
         allocator.initialize();
         return allocator;
+    }
+
+    private DatabaseSchema readSchemaFile(Path dbRoot) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        return objectMapper.readValue(dbRoot.resolve("metadata/schema.json").toFile(), DatabaseSchema.class);
+    }
+
+    private void writeSchemaFile(Path dbRoot, DatabaseSchema schema) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        objectMapper.writeValue(dbRoot.resolve("metadata/schema.json").toFile(), schema);
     }
 }

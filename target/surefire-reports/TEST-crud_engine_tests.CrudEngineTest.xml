@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="crud_engine_tests.CrudEngineTest" time="0.209" tests="13" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="crud_engine_tests.CrudEngineTest" time="0.528" tests="25" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -13,7 +13,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk@21/21.0.8/libexec/openjdk.jdk/Contents/Home/lib"/>
-    <property name="sun.java.command" value="/Users/kaisorensen/Code/database/target/surefire/surefirebooter-20260403153846020_3.jar /Users/kaisorensen/Code/database/target/surefire 2026-04-03T15-38-45_942-jvmRun1 surefire-20260403153846020_1tmp surefire_0-20260403153846020_2tmp"/>
+    <property name="sun.java.command" value="/Users/kaisorensen/Code/database/target/surefire/surefirebooter-20260404134707544_3.jar /Users/kaisorensen/Code/database/target/surefire 2026-04-04T13-47-07_477-jvmRun1 surefire-20260404134707544_1tmp surefire_0-20260404134707544_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="/Users/kaisorensen/Code/database/target/test-classes:/Users/kaisorensen/Code/database/target/classes:/Users/kaisorensen/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.17.2/jackson-databind-2.17.2.jar:/Users/kaisorensen/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.17.2/jackson-annotations-2.17.2.jar:/Users/kaisorensen/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.17.2/jackson-core-2.17.2.jar:/Users/kaisorensen/.m2/repository/org/junit/jupiter/junit-jupiter/5.14.1/junit-jupiter-5.14.1.jar:/Users/kaisorensen/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.14.1/junit-jupiter-api-5.14.1.jar:/Users/kaisorensen/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/kaisorensen/.m2/repository/org/junit/platform/junit-platform-commons/1.14.1/junit-platform-commons-1.14.1.jar:/Users/kaisorensen/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/kaisorensen/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.14.1/junit-jupiter-params-5.14.1.jar:/Users/kaisorensen/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.14.1/junit-jupiter-engine-5.14.1.jar:/Users/kaisorensen/.m2/repository/org/junit/platform/junit-platform-engine/1.14.1/junit-platform-engine-1.14.1.jar:"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -29,7 +29,7 @@
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="apple.awt.application.name" value="ForkedBooter"/>
-    <property name="surefire.real.class.path" value="/Users/kaisorensen/Code/database/target/surefire/surefirebooter-20260403153846020_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/kaisorensen/Code/database/target/surefire/surefirebooter-20260404134707544_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.8"/>
     <property name="user.name" value="kaisorensen"/>
@@ -56,17 +56,29 @@
     <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="closePreventsFurtherOperations" classname="crud_engine_tests.CrudEngineTest" time="0.1"/>
-  <testcase name="initializationFailsOnInconsistentAttributeRowCounts" classname="crud_engine_tests.CrudEngineTest" time="0.012"/>
-  <testcase name="deleteObjectWithChildThrowsAndKeepsObject" classname="crud_engine_tests.CrudEngineTest" time="0.007"/>
-  <testcase name="initializeFailsWhenAttributeFileIsMissing" classname="crud_engine_tests.CrudEngineTest" time="0.007"/>
-  <testcase name="namingIsSluggedAndCaseInsensitiveForUniquenessAndRename" classname="crud_engine_tests.CrudEngineTest" time="0.008"/>
-  <testcase name="createObjectPersistsSchemaAcrossRestart" classname="crud_engine_tests.CrudEngineTest" time="0.01"/>
-  <testcase name="typedRoundTripsAndNullSentinelWorkForAllTypes" classname="crud_engine_tests.CrudEngineTest" time="0.016"/>
-  <testcase name="addAttributeBackfillsNullsAndDeleteRowCompactsIndexes" classname="crud_engine_tests.CrudEngineTest" time="0.012"/>
-  <testcase name="typeMismatchAndRowBoundsThrow" classname="crud_engine_tests.CrudEngineTest" time="0.01"/>
-  <testcase name="createChildObjectCopiesParentAttributesAndStoresParentLink" classname="crud_engine_tests.CrudEngineTest" time="0.006"/>
-  <testcase name="insertRowWithoutAttributesThrows" classname="crud_engine_tests.CrudEngineTest" time="0.005"/>
-  <testcase name="deleteAttributeRemovesFileSchemaAndAllocatorEntry" classname="crud_engine_tests.CrudEngineTest" time="0.007"/>
-  <testcase name="renameObjectUpdatesChildParentReference" classname="crud_engine_tests.CrudEngineTest" time="0.006"/>
+  <testcase name="closePreventsFurtherOperations" classname="crud_engine_tests.CrudEngineTest" time="0.163"/>
+  <testcase name="initializationFailsOnInconsistentAttributeRowCounts" classname="crud_engine_tests.CrudEngineTest" time="0.02"/>
+  <testcase name="deleteObjectWithChildThrowsAndKeepsObject" classname="crud_engine_tests.CrudEngineTest" time="0.01"/>
+  <testcase name="addParentFailsWhenItWouldCreateCycle" classname="crud_engine_tests.CrudEngineTest" time="0.012"/>
+  <testcase name="initializeFailsWhenSchemaAttributeNameDoesNotMatchKey" classname="crud_engine_tests.CrudEngineTest" time="0.022"/>
+  <testcase name="initializeFailsWhenObjectDirectoryIsMissing" classname="crud_engine_tests.CrudEngineTest" time="0.014"/>
+  <testcase name="initializeFailsWhenAttributeFileIsMissing" classname="crud_engine_tests.CrudEngineTest" time="0.019"/>
+  <testcase name="namingIsSluggedAndCaseInsensitiveForUniquenessAndRename" classname="crud_engine_tests.CrudEngineTest" time="0.017"/>
+  <testcase name="createObjectPersistsSchemaAcrossRestart" classname="crud_engine_tests.CrudEngineTest" time="0.019"/>
+  <testcase name="typedRoundTripsAndNullSentinelWorkForAllTypes" classname="crud_engine_tests.CrudEngineTest" time="0.024"/>
+  <testcase name="addParentFailsWhenObjectAlreadyHasParent" classname="crud_engine_tests.CrudEngineTest" time="0.017"/>
+  <testcase name="removeParentDecouplesChildSoFormerParentCanBeDeleted" classname="crud_engine_tests.CrudEngineTest" time="0.018"/>
+  <testcase name="initializeFailsWhenSchemaReferencesMissingParentObject" classname="crud_engine_tests.CrudEngineTest" time="0.018"/>
+  <testcase name="initializeFailsWhenAttributeFileContainsBlankAddressLine" classname="crud_engine_tests.CrudEngineTest" time="0.015"/>
+  <testcase name="addAttributeBackfillsNullsAndDeleteRowCompactsIndexes" classname="crud_engine_tests.CrudEngineTest" time="0.017"/>
+  <testcase name="typeMismatchAndRowBoundsThrow" classname="crud_engine_tests.CrudEngineTest" time="0.019"/>
+  <testcase name="addParentReattachesWhenChildAlreadyHasParentAttributes" classname="crud_engine_tests.CrudEngineTest" time="0.012"/>
+  <testcase name="initializeFailsWhenSchemaVersionIsInvalid" classname="crud_engine_tests.CrudEngineTest" time="0.009"/>
+  <testcase name="createChildObjectCopiesParentAttributesAndStoresParentLink" classname="crud_engine_tests.CrudEngineTest" time="0.009"/>
+  <testcase name="initializeFailsWhenAttributeFileContainsInvalidAddressText" classname="crud_engine_tests.CrudEngineTest" time="0.012"/>
+  <testcase name="insertRowWithoutAttributesThrows" classname="crud_engine_tests.CrudEngineTest" time="0.006"/>
+  <testcase name="deleteAttributeRemovesFileSchemaAndAllocatorEntry" classname="crud_engine_tests.CrudEngineTest" time="0.013"/>
+  <testcase name="initializeFailsWhenSchemaObjectNameDoesNotMatchKey" classname="crud_engine_tests.CrudEngineTest" time="0.011"/>
+  <testcase name="renameObjectUpdatesChildParentReference" classname="crud_engine_tests.CrudEngineTest" time="0.009"/>
+  <testcase name="addParentFailsWhenChildDoesNotAlreadyContainParentAttributes" classname="crud_engine_tests.CrudEngineTest" time="0.008"/>
 </testsuite>

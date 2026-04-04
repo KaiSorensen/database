@@ -36,6 +36,10 @@ public interface CrudEngineInterface extends AutoCloseable {
     // rename object (no update: you can only "update" the name)
     void renameObject(String oldObjectName, String newObjectName) throws IOException;
 
+    void removeParent(String objectName) throws IOException;
+
+    void addParent(String objectName, String parentObjectName) throws IOException;
+
     // create attribute
     void createAttribute(String objectName, String attributeName, AttributeType attributeType) throws IOException;
 

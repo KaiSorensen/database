@@ -17,6 +17,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import memory_allocator.BitmapMemoryAllocator;
 
+/**
+ * This class wraps around the memory allocator, providing the outer layer of database file interaction. It contains a BitmapMemoryAllocator as an instance variable.
+ * It manages the schema, object, and attribute files. Through these files, it organizes all database data in a queryable fashion.
+ * 
+ * @author Written by Codex, designed and documented by Kai
+ */
+
 public class CrudEngine implements CrudEngineInterface {
     private static final long NULL_ADDRESS = -1L;
     private static final int SCHEMA_VERSION = 1;
@@ -50,16 +57,21 @@ public class CrudEngine implements CrudEngineInterface {
     }
 
     public void initialize() throws IOException {
+        // opened by the constructor before this is called
         ensureOpen();
+
+        // ensure that the database folders exist
         Files.createDirectories(databaseRoot);
         Files.createDirectories(metadataPath);
         Files.createDirectories(objectsRootPath);
         allocator.initialize();
 
+        // if this is the first time, create a new database schema
         if (!Files.exists(schemaPath)) {
             writeSchemaInternal(new DatabaseSchema(SCHEMA_VERSION, new LinkedHashMap<>()));
         }
 
+        // make sure the file structure matches what we have in the object
         validateSchemaState(loadSchemaInternal());
     }
 
@@ -67,30 +79,37 @@ public class CrudEngine implements CrudEngineInterface {
     public void createObject(String objectName, String parentObjectNameNullable) throws IOException {
         ensureOpen();
 
+        // get/initialize the schema
         DatabaseSchema schema = loadSchemaInternal();
         String objectSlug = normalizeName(objectName);
+        // if there's already an object of this name
         if (schema.getObjects().containsKey(objectSlug)) {
             throw new IOException("Object already exists: " + objectName);
         }
-
+        // if this is a valid new object name, proceed to create it
         ObjectSchema objectSchema = new ObjectSchema();
         objectSchema.setObjectName(objectSlug);
 
+        // get initial attributes (empty if no parent)
         if (parentObjectNameNullable != null) {
+            // if it has a parent obejct, get the parent's attributes
             String parentSlug = normalizeName(parentObjectNameNullable);
             ObjectSchema parentSchema = requireObject(schema, parentSlug);
             objectSchema.setParentObjectName(parentSlug);
             objectSchema.setAttributes(copyAttributes(parentSchema.getAttributes()));
         } else {
+            //if it has no parent, make a new space for attributes
             objectSchema.setParentObjectName(null);
             objectSchema.setAttributes(new LinkedHashMap<>());
         }
 
+        // make the object's folder for attributes
         Files.createDirectories(getObjectDirectory(objectSlug));
         for (String attributeSlug : objectSchema.getAttributes().keySet()) {
             writeAttributeAddresses(getAttributeFilePath(objectSlug, attributeSlug), List.of());
         }
 
+        // officially add the object to the schema
         schema.getObjects().put(objectSlug, objectSchema);
         writeSchemaInternal(schema);
     }
@@ -99,10 +118,12 @@ public class CrudEngine implements CrudEngineInterface {
     public void deleteObject(String objectName) throws IOException {
         ensureOpen();
 
+        // load in the schema
         DatabaseSchema schema = loadSchemaInternal();
         String objectSlug = normalizeName(objectName);
         requireObject(schema, objectSlug);
 
+        // check if there are children of this object, which can't exist without their parent
         for (ObjectSchema schemaEntry : schema.getObjects().values()) {
             if (objectSlug.equals(schemaEntry.getParentObjectName())) {
                 throw new IOException("Cannot delete object with child objects: " + objectName);
@@ -144,6 +165,45 @@ public class CrudEngine implements CrudEngineInterface {
             }
         }
 
+        writeSchemaInternal(schema);
+    }
+
+    @Override
+    public void removeParent(String objectName) throws IOException {
+        ensureOpen();
+
+        DatabaseSchema schema = loadSchemaInternal();
+        ObjectSchema objectSchema = requireObject(schema, normalizeName(objectName));
+        if (objectSchema.getParentObjectName() == null) {
+            throw new IOException("Object does not currently have a parent: " + objectName);
+        }
+
+        objectSchema.setParentObjectName(null);
+        writeSchemaInternal(schema);
+    }
+
+    @Override
+    public void addParent(String objectName, String parentObjectName) throws IOException {
+        ensureOpen();
+
+        DatabaseSchema schema = loadSchemaInternal();
+        String objectSlug = normalizeName(objectName);
+        String parentSlug = normalizeName(parentObjectName);
+        ObjectSchema objectSchema = requireObject(schema, objectSlug);
+        ObjectSchema parentSchema = requireObject(schema, parentSlug);
+
+        if (objectSlug.equals(parentSlug)) {
+            throw new IOException("Object cannot be its own parent: " + objectName);
+        }
+        if (objectSchema.getParentObjectName() != null) {
+            throw new IOException("Object already has a parent: " + objectName);
+        }
+        if (wouldCreateParentCycle(schema, objectSlug, parentSlug)) {
+            throw new IOException("Adding parent would create an inheritance cycle");
+        }
+
+        requireAllParentAttributesPresent(objectSchema, parentSchema);
+        objectSchema.setParentObjectName(parentSlug);
         writeSchemaInternal(schema);
     }
 
@@ -211,6 +271,14 @@ public class CrudEngine implements CrudEngineInterface {
         return loadSchemaInternal();
     }
 
+    /**
+     * Creates placeholder null addresses under each attribute that will be modified before execution ends.
+     * Since this is the class which handles type conversions, it offers a method for reading/writing each type.
+     * Therefore, the read/write methods for each type need to take object/attribute pair as a parameter.
+     * They could just assume the row count, but we have a function to be explicit about it because it modularizes creation versus updating. Also, it ensures that attribute row counts are equal.
+     * We could have abstracted away row indexing into this class, but it's the query executor layer that is doing all the discrimination anyway, and the row indexing logic counts as row discrimination.
+     * @return the row count
+     */
     @Override
     public int insertRow(String objectName) throws IOException {
         ensureOpen();
@@ -239,6 +307,15 @@ public class CrudEngine implements CrudEngineInterface {
         ObjectSchema objectSchema = requireObject(loadSchemaInternal(), normalizeName(objectName));
         return getRowCountInternal(objectSchema);
     }
+
+
+    /*
+     * The read/write functions all call readTypedValue/writeTypedValue respectively.
+     * The readTypedValue/writeTypedValue functions which call the allocator. 
+     * The type conversions for write's are handled within writeTypedValue.
+     * The type conversions for read's are handled in the return statements of these function.
+     * readTypedValue/writeTypedValue take the AttributeType as a parameter because they verify the type against the schema.
+    */
 
     @Override
     public void writeInt(String objectName, String attributeName, int rowIndex, Integer value)
@@ -321,6 +398,10 @@ public class CrudEngine implements CrudEngineInterface {
         allocator.close();
     }
 
+    /**
+     * Deletes one attribute from the object's schema and removes every allocator payload referenced
+     * by that attribute file before deleting the file itself.
+     */
     private void deleteAttributeInternal(DatabaseSchema schema, String objectSlug, String attributeSlug)
             throws IOException {
         ObjectSchema objectSchema = requireObject(schema, objectSlug);
@@ -335,6 +416,11 @@ public class CrudEngine implements CrudEngineInterface {
         objectSchema.getAttributes().remove(attributeSlug);
     }
 
+    /**
+     * Validates the object, attribute, row, and declared type, then writes a typed value into the
+     * attribute file and allocator. A {@code null} value clears the current allocation and stores
+     * the null sentinel instead.
+     */
     private void writeTypedValue(
             String objectName,
             String attributeName,
@@ -348,22 +434,27 @@ public class CrudEngine implements CrudEngineInterface {
         String attributeSlug = normalizeName(attributeName);
         ObjectSchema objectSchema = requireObject(schema, objectSlug);
         AttributeSchema attributeSchema = requireAttribute(objectSchema, attributeSlug);
+
+        // ensure that the attribute's type matches what's specified in the schema
         requireType(attributeSchema, expectedType);
 
+        // ensure that we're adding the value at the same index as any other values in the request
         Path attributeFilePath = getAttributeFilePath(objectSlug, attributeSlug);
         List<Long> addresses = readAttributeAddresses(attributeFilePath);
         validateRowIndex(rowIndex, addresses.size());
 
+
         long currentAddress = addresses.get(rowIndex);
         long nextAddress;
         if (value == null) {
+            // if we're updating a previously non-null value to now be a null value 
             deleteAllocationIfPresent(currentAddress);
             nextAddress = NULL_ADDRESS;
         } else {
-            byte[] payload = toBytes(expectedType, value);
+            byte[] payload = toBytes(expectedType, value); // where the type conversion occurs
             nextAddress = currentAddress == NULL_ADDRESS
                 ? allocator.create(payload)
-                : allocator.update(currentAddress, payload);
+                : allocator.update(currentAddress, payload); // we have to check if it already exists because the update 
         }
 
         addresses.set(rowIndex, nextAddress);
@@ -371,6 +462,10 @@ public class CrudEngine implements CrudEngineInterface {
         allocator.flush();
     }
 
+    /**
+     * Validates the object, attribute, row, and declared type, then returns the stored raw payload
+     * bytes for that cell. Returns {@code null} when the row stores the null sentinel.
+     */
     private byte[] readTypedValue(
             String objectName,
             String attributeName,
@@ -395,6 +490,10 @@ public class CrudEngine implements CrudEngineInterface {
         return allocator.read(address);
     }
 
+    /**
+     * Converts a typed Java value into the byte representation expected by the allocator for the
+     * given attribute type.
+     */
     private byte[] toBytes(AttributeType attributeType, Object value) throws IOException {
         return switch (attributeType) {
             case INT -> TypeByteConversions.intToBytes((Integer) value);
@@ -404,6 +503,10 @@ public class CrudEngine implements CrudEngineInterface {
         };
     }
 
+    /**
+     * Ensures that the schema-declared type for an attribute matches the typed CRUD operation being
+     * performed.
+     */
     private void requireType(AttributeSchema attributeSchema, AttributeType expectedType) throws IOException {
         if (attributeSchema.getAttributeType() != expectedType) {
             throw new IOException(
@@ -416,15 +519,28 @@ public class CrudEngine implements CrudEngineInterface {
         }
     }
 
+    /**
+     * Loads the schema JSON from disk, normalizes any missing in-memory defaults left by
+     * deserialization, and verifies that the schema still matches the object folders and attribute
+     * files on disk.
+     */
     private DatabaseSchema loadSchemaInternal() throws IOException {
         DatabaseSchema schema = objectMapper.readValue(schemaPath.toFile(), DatabaseSchema.class);
+        
+        // If the schema file omitted the objects map or Jackson deserialized it as null, restore
+        // the empty map so the rest of the CRUD code can treat "no objects yet" as a normal state.
         if (schema.getObjects() == null) {
             schema.setObjects(new LinkedHashMap<>());
         }
+
+        // The schema version tracks the CRUD layer's metadata/file-layout format. If an older or
+        // partially written schema has no version yet, default it to the current format version.
         if (schema.getSchemaVersion() == 0) {
             schema.setSchemaVersion(SCHEMA_VERSION);
         }
 
+        // Rebuild any missing nested defaults left by deserialization so later code can rely on
+        // object names, attribute maps, and attribute names being populated in memory.
         for (Map.Entry<String, ObjectSchema> entry : schema.getObjects().entrySet()) {
             ObjectSchema objectSchema = entry.getValue();
             if (objectSchema.getObjectName() == null) {
@@ -441,15 +557,25 @@ public class CrudEngine implements CrudEngineInterface {
             }
         }
 
+        // ensures that the loaded schema matches what's on disk
         validateSchemaState(schema);
         return schema;
     }
 
+    /**
+     * Persists the full schema object to {@code metadata/schema.json}, creating the metadata
+     * directory first if needed.
+     */
     private void writeSchemaInternal(DatabaseSchema schema) throws IOException {
+        // 
         Files.createDirectories(metadataPath);
         objectMapper.writeValue(schemaPath.toFile(), schema);
     }
 
+    /**
+     * Verifies that the schema is internally consistent and that every schema reference has a
+     * matching object folder and attribute file on disk with aligned row counts.
+     */
     private void validateSchemaState(DatabaseSchema schema) throws IOException {
         if (schema.getSchemaVersion() <= 0) {
             throw new IOException("Schema version must be positive");
@@ -493,6 +619,9 @@ public class CrudEngine implements CrudEngineInterface {
         }
     }
 
+    /**
+     * Returns the schema entry for the requested object or throws when the object does not exist.
+     */
     private ObjectSchema requireObject(DatabaseSchema schema, String objectSlug) throws IOException {
         ObjectSchema objectSchema = schema.getObjects().get(objectSlug);
         if (objectSchema == null) {
@@ -501,6 +630,10 @@ public class CrudEngine implements CrudEngineInterface {
         return objectSchema;
     }
 
+    /**
+     * Returns the schema entry for the requested attribute within one object or throws when the
+     * attribute does not exist.
+     */
     private AttributeSchema requireAttribute(ObjectSchema objectSchema, String attributeSlug)
             throws IOException {
         AttributeSchema attributeSchema = objectSchema.getAttributes().get(attributeSlug);
@@ -511,6 +644,10 @@ public class CrudEngine implements CrudEngineInterface {
         return attributeSchema;
     }
 
+    /**
+     * Derives the object's row count from its attribute files and confirms that every attribute file
+     * has the same number of rows.
+     */
     private int getRowCountInternal(ObjectSchema objectSchema) throws IOException {
         if (objectSchema.getAttributes().isEmpty()) {
             return 0;
@@ -528,6 +665,10 @@ public class CrudEngine implements CrudEngineInterface {
         return rowCount;
     }
 
+    /**
+     * Builds an in-memory list filled with the null sentinel so a new attribute file can be
+     * backfilled for existing rows.
+     */
     private List<Long> createNullAddresses(int rowCount) {
         List<Long> addresses = new ArrayList<>(rowCount);
         for (int i = 0; i < rowCount; i++) {
@@ -536,12 +677,19 @@ public class CrudEngine implements CrudEngineInterface {
         return addresses;
     }
 
+    /**
+     * Ensures that a requested row index points to an existing row in the current attribute file.
+     */
     private void validateRowIndex(int rowIndex, int rowCount) throws IOException {
         if (rowIndex < 0 || rowIndex >= rowCount) {
             throw new IOException("Row index out of bounds: " + rowIndex);
         }
     }
 
+    /**
+     * Reads one attribute file and parses each line as a decimal allocator address, preserving row
+     * order exactly as stored on disk.
+     */
     private List<Long> readAttributeAddresses(Path attributeFilePath) throws IOException {
         if (!Files.exists(attributeFilePath)) {
             throw new IOException("Missing attribute file: " + attributeFilePath);
@@ -563,6 +711,10 @@ public class CrudEngine implements CrudEngineInterface {
         return addresses;
     }
 
+    /**
+     * Rewrites one attribute file from an in-memory list of addresses, storing one decimal address
+     * per line in row order.
+     */
     private void writeAttributeAddresses(Path attributeFilePath, List<Long> addresses) throws IOException {
         List<String> lines = new ArrayList<>(addresses.size());
         for (long address : addresses) {
@@ -573,12 +725,19 @@ public class CrudEngine implements CrudEngineInterface {
         Files.write(attributeFilePath, lines, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Deletes an allocator payload only when the stored address is not the null sentinel.
+     */
     private void deleteAllocationIfPresent(long address) throws IOException {
         if (address != NULL_ADDRESS) {
             allocator.delete(address);
         }
     }
 
+    /**
+     * Copies attribute metadata into a new linked map so child objects can start with their own
+     * effective schema instead of sharing the parent's map instance.
+     */
     private LinkedHashMap<String, AttributeSchema> copyAttributes(Map<String, AttributeSchema> attributes) {
         LinkedHashMap<String, AttributeSchema> copied = new LinkedHashMap<>();
         for (Map.Entry<String, AttributeSchema> entry : attributes.entrySet()) {
@@ -589,14 +748,65 @@ public class CrudEngine implements CrudEngineInterface {
         return copied;
     }
 
+    /**
+     * Ensures that a child object already contains every attribute required by the proposed parent
+     * using the same normalized attribute names and declared types.
+     */
+    private void requireAllParentAttributesPresent(ObjectSchema objectSchema, ObjectSchema parentSchema)
+            throws IOException {
+        for (Map.Entry<String, AttributeSchema> parentEntry : parentSchema.getAttributes().entrySet()) {
+            AttributeSchema childAttribute = objectSchema.getAttributes().get(parentEntry.getKey());
+            if (childAttribute == null) {
+                throw new IOException(
+                    "Object "
+                        + objectSchema.getObjectName()
+                        + " is missing parent attribute "
+                        + parentEntry.getKey());
+            }
+            if (childAttribute.getAttributeType() != parentEntry.getValue().getAttributeType()) {
+                throw new IOException(
+                    "Attribute type mismatch for inherited attribute "
+                        + parentEntry.getKey());
+            }
+        }
+    }
+
+    /**
+     * Returns whether attaching the proposed parent would create a cycle in the single-parent
+     * inheritance chain.
+     */
+    private boolean wouldCreateParentCycle(
+            DatabaseSchema schema,
+            String childSlug,
+            String proposedParentSlug) throws IOException {
+        String currentSlug = proposedParentSlug;
+        while (currentSlug != null) {
+            if (childSlug.equals(currentSlug)) {
+                return true;
+            }
+            currentSlug = requireObject(schema, currentSlug).getParentObjectName();
+        }
+        return false;
+    }
+
+    /**
+     * Returns the directory used to store all attribute files for one object.
+     */
     private Path getObjectDirectory(String objectSlug) {
         return objectsRootPath.resolve(objectSlug);
     }
 
+    /**
+     * Returns the path to one attribute file based on normalized object and attribute names.
+     */
     private Path getAttributeFilePath(String objectSlug, String attributeSlug) {
         return getObjectDirectory(objectSlug).resolve(attributeSlug + ATTRIBUTE_FILE_EXTENSION);
     }
 
+    /**
+     * Normalizes a user-facing object or attribute name into the lowercase slug form used for
+     * schema keys and on-disk paths.
+     */
     private String normalizeName(String rawName) {
         if (rawName == null) {
             throw new IllegalArgumentException("Name cannot be null");
@@ -613,6 +823,10 @@ public class CrudEngine implements CrudEngineInterface {
         return normalized;
     }
 
+    /**
+     * Recursively deletes a directory tree from the bottom up so files are removed before their
+     * parent directories.
+     */
     private void deleteDirectory(Path directoryPath) throws IOException {
         if (!Files.exists(directoryPath)) {
             return;
@@ -624,6 +838,9 @@ public class CrudEngine implements CrudEngineInterface {
         }
     }
 
+    /**
+     * Guards every public operation after shutdown so the engine cannot be reused once closed.
+     */
     private void ensureOpen() {
         if (closed) {
             throw new IllegalStateException("CRUD engine has been closed");
