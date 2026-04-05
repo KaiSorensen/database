@@ -51,6 +51,23 @@ public class CrudEngineTest {
     }
 
     @Test
+    void persistedNullValuesRemainNullAcrossRestart() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("People", null);
+            engine.createAttribute("People", "Name", AttributeType.STRING);
+            int rowIndex = engine.insertRow("People");
+            engine.writeString("People", "Name", rowIndex, null);
+        }
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            assertEquals(1, engine.getRowCount("People"));
+            assertNull(engine.readString("People", "Name", 0));
+        }
+    }
+
+    @Test
     void createChildObjectCopiesParentAttributesAndStoresParentLink() throws Exception {
         try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
             engine.createObject("Mammals", null);
@@ -61,6 +78,21 @@ public class CrudEngineTest {
             assertEquals("mammals", schema.getObjects().get("giraffes").getParentObjectName());
             assertTrue(schema.getObjects().get("giraffes").getAttributes().containsKey("species"));
             assertTrue(Files.exists(tempDir.resolve("db/metadata/objects/giraffes/species.txt")));
+        }
+    }
+
+    @Test
+    void childSchemaDoesNotAutoReceiveParentAttributesAddedLater() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Mammals", null);
+            engine.createAttribute("Mammals", "Species", AttributeType.STRING);
+            engine.createObject("Giraffes", "Mammals");
+
+            engine.createAttribute("Mammals", "Has Fur", AttributeType.BOOL);
+
+            DatabaseSchema schema = engine.readSchema();
+            assertTrue(schema.getObjects().get("mammals").getAttributes().containsKey("has_fur"));
+            assertFalse(schema.getObjects().get("giraffes").getAttributes().containsKey("has_fur"));
         }
     }
 
@@ -79,6 +111,23 @@ public class CrudEngineTest {
             assertTrue(Files.isDirectory(tempDir.resolve("db/metadata/objects/big_cats")));
             assertTrue(Files.exists(tempDir.resolve("db/metadata/objects/big_cats/label.txt")));
             assertFalse(Files.exists(tempDir.resolve("db/metadata/objects/zoo_animals")));
+        }
+    }
+
+    @Test
+    void renamingObjectOrAttributeToExistingSlugThrows() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Cats", null);
+            engine.createObject("Dogs", null);
+            engine.createAttribute("Cats", "Name", AttributeType.STRING);
+            engine.createAttribute("Cats", "Age", AttributeType.INT);
+
+            IOException objectException = assertThrows(IOException.class, () -> engine.renameObject("Cats", "Dogs"));
+            assertTrue(objectException.getMessage().contains("already exists"));
+
+            IOException attributeException =
+                assertThrows(IOException.class, () -> engine.renameAttribute("Cats", "Name", "Age"));
+            assertTrue(attributeException.getMessage().contains("already exists"));
         }
     }
 
@@ -113,6 +162,28 @@ public class CrudEngineTest {
     }
 
     @Test
+    void falseAndZeroValuesAreStoredAsRealValuesNotNull() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Flags", null);
+            engine.createAttribute("Flags", "Count", AttributeType.INT);
+            engine.createAttribute("Flags", "Enabled", AttributeType.BOOL);
+
+            int rowIndex = engine.insertRow("Flags");
+            engine.writeInt("Flags", "Count", rowIndex, 0);
+            engine.writeBool("Flags", "Enabled", rowIndex, false);
+
+            assertEquals(0, engine.readInt("Flags", "Count", rowIndex));
+            assertEquals(false, engine.readBool("Flags", "Enabled", rowIndex));
+            assertFalse(Files.readAllLines(
+                tempDir.resolve("db/metadata/objects/flags/count.txt"),
+                StandardCharsets.UTF_8).contains("-1"));
+            assertFalse(Files.readAllLines(
+                tempDir.resolve("db/metadata/objects/flags/enabled.txt"),
+                StandardCharsets.UTF_8).contains("-1"));
+        }
+    }
+
+    @Test
     void addAttributeBackfillsNullsAndDeleteRowCompactsIndexes() throws Exception {
         try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
             engine.createObject("Pets", null);
@@ -138,6 +209,27 @@ public class CrudEngineTest {
             assertEquals(1, Files.readAllLines(
                 tempDir.resolve("db/metadata/objects/pets/name.txt"),
                 StandardCharsets.UTF_8).size());
+        }
+    }
+
+    @Test
+    void insertRowReturnsSequentialIndexesAndDeleteRowHandlesNullCells() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Plants", null);
+            engine.createAttribute("Plants", "Name", AttributeType.STRING);
+            engine.createAttribute("Plants", "Height", AttributeType.INT);
+
+            int first = engine.insertRow("Plants");
+            int second = engine.insertRow("Plants");
+            assertEquals(0, first);
+            assertEquals(1, second);
+
+            engine.writeString("Plants", "Name", second, "oak");
+            engine.deleteRow("Plants", first);
+
+            assertEquals(1, engine.getRowCount("Plants"));
+            assertEquals("oak", engine.readString("Plants", "Name", 0));
+            assertNull(engine.readInt("Plants", "Height", 0));
         }
     }
 
@@ -185,6 +277,20 @@ public class CrudEngineTest {
     }
 
     @Test
+    void deletingLeafObjectRemovesItsDirectoryAndSchemaEntry() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Birds", null);
+            engine.createAttribute("Birds", "Name", AttributeType.STRING);
+            engine.deleteObject("Birds");
+
+            assertFalse(engine.readSchema().getObjects().containsKey("birds"));
+            assertFalse(Files.exists(dbRoot.resolve("metadata/objects/birds")));
+        }
+    }
+
+    @Test
     void deleteAttributeRemovesFileSchemaAndAllocatorEntry() throws Exception {
         Path dbRoot = tempDir.resolve("db");
 
@@ -228,6 +334,19 @@ public class CrudEngineTest {
     }
 
     @Test
+    void wrongTypedReadAlsoThrowsTypeMismatch() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("People", null);
+            engine.createAttribute("People", "Age", AttributeType.INT);
+            int rowIndex = engine.insertRow("People");
+            engine.writeInt("People", "Age", rowIndex, 42);
+
+            IOException exception = assertThrows(IOException.class, () -> engine.readString("People", "Age", rowIndex));
+            assertTrue(exception.getMessage().contains("not STRING"));
+        }
+    }
+
+    @Test
     void renameObjectUpdatesChildParentReference() throws Exception {
         try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
             engine.createObject("Animals", null);
@@ -255,6 +374,16 @@ public class CrudEngineTest {
             engine.deleteObject("Mammals");
             assertFalse(engine.readSchema().getObjects().containsKey("mammals"));
             assertTrue(engine.readSchema().getObjects().containsKey("giraffes"));
+        }
+    }
+
+    @Test
+    void removeParentThrowsWhenObjectHasNoParent() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Animals", null);
+
+            IOException exception = assertThrows(IOException.class, () -> engine.removeParent("Animals"));
+            assertTrue(exception.getMessage().contains("does not currently have a parent"));
         }
     }
 
@@ -295,6 +424,29 @@ public class CrudEngineTest {
 
             IOException exception = assertThrows(IOException.class, () -> engine.addParent("Giraffes", "Animals"));
             assertTrue(exception.getMessage().contains("already has a parent"));
+        }
+    }
+
+    @Test
+    void addParentFailsWhenInheritedAttributeTypeDiffers() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Animals", null);
+            engine.createAttribute("Animals", "Age", AttributeType.INT);
+            engine.createObject("Birds", null);
+            engine.createAttribute("Birds", "Age", AttributeType.STRING);
+
+            IOException exception = assertThrows(IOException.class, () -> engine.addParent("Birds", "Animals"));
+            assertTrue(exception.getMessage().contains("type mismatch"));
+        }
+    }
+
+    @Test
+    void addParentFailsWhenObjectWouldBecomeOwnParent() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("Animals", null);
+
+            IOException exception = assertThrows(IOException.class, () -> engine.addParent("Animals", "Animals"));
+            assertTrue(exception.getMessage().contains("own parent"));
         }
     }
 
@@ -451,6 +603,23 @@ public class CrudEngineTest {
         CrudEngine engine = new CrudEngine(dbRoot);
         IOException exception = assertThrows(IOException.class, engine::initialize);
         assertTrue(exception.getMessage().contains("Blank address line"));
+    }
+
+    @Test
+    void initializeFailsWhenSchemaJsonIsMalformed() throws Exception {
+        Path dbRoot = tempDir.resolve("db");
+
+        try (CrudEngine engine = newEngine(dbRoot)) {
+            engine.createObject("Pets", null);
+        }
+
+        Files.writeString(
+            dbRoot.resolve("metadata/schema.json"),
+            "{ this is not valid json",
+            StandardCharsets.UTF_8);
+
+        CrudEngine engine = new CrudEngine(dbRoot);
+        assertThrows(IOException.class, engine::initialize);
     }
 
     @Test
