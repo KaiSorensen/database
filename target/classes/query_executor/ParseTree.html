@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parse Tree Explorer</title>
+    <style>
+        :root {
+            --bg: #f4efe3;
+            --panel: rgba(255, 252, 245, 0.88);
+            --ink: #1f1d1a;
+            --muted: #6b655c;
+            --line: #b7ae9f;
+            --root: #294c60;
+            --object: #4f772d;
+            --attribute: #9a3412;
+            --data: #5b3a70;
+            --leaf: #ffffff;
+            --accent: #d6c6a8;
+            --shadow: 0 20px 50px rgba(49, 44, 36, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            background:
+                radial-gradient(circle at top left, rgba(41, 76, 96, 0.08), transparent 26%),
+                radial-gradient(circle at top right, rgba(91, 58, 112, 0.10), transparent 24%),
+                linear-gradient(180deg, #fbf8f1 0%, var(--bg) 100%);
+        }
+
+        .shell {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        .panel,
+        .viewport {
+            background: var(--panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(105, 95, 83, 0.18);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel {
+            padding: 22px 20px;
+            align-self: start;
+            position: sticky;
+            top: 24px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 2rem;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+
+        .lede {
+            margin: 0 0 18px;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .controls {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        button {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 11px 14px;
+            background: #1f1d1a;
+            color: #fffdf9;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 140ms ease, opacity 140ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            opacity: 0.95;
+        }
+
+        .mini {
+            display: grid;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .mini strong {
+            color: var(--ink);
+        }
+
+        .viewport {
+            position: relative;
+            overflow: hidden;
+            min-height: calc(100vh - 48px);
+            cursor: grab;
+        }
+
+        .viewport.dragging {
+            cursor: grabbing;
+        }
+
+        .canvas {
+            position: absolute;
+            inset: 0 auto auto 0;
+            transform-origin: 0 0;
+            will-change: transform;
+            padding: 40px 60px 80px;
+        }
+
+        .tree,
+        .tree ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        .tree {
+            white-space: nowrap;
+        }
+
+        .tree ul {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding-top: 34px;
+        }
+
+        .tree li {
+            text-align: center;
+            position: relative;
+            padding: 0 6px;
+        }
+
+        .tree li::before,
+        .tree li::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 18px;
+            border-top: 2px solid var(--line);
+        }
+
+        .tree li::before {
+            right: 50%;
+            border-right: 2px solid var(--line);
+            border-radius: 0 10px 0 0;
+        }
+
+        .tree li::after {
+            left: 50%;
+            border-left: 2px solid var(--line);
+            border-radius: 10px 0 0 0;
+        }
+
+        .tree li:only-child::before,
+        .tree li:only-child::after {
+            display: none;
+        }
+
+        .tree li:first-child::before,
+        .tree li:last-child::after {
+            border: 0;
+        }
+
+        .tree li:first-child::after {
+            border-radius: 10px 0 0 0;
+        }
+
+        .tree li:last-child::before {
+            border-radius: 0 10px 0 0;
+        }
+
+        .tree ul::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 0;
+            height: 34px;
+            border-left: 2px solid var(--line);
+        }
+
+        details.node {
+            display: inline-block;
+            min-width: 170px;
+            max-width: 260px;
+            text-align: left;
+            border-radius: 18px;
+            background: var(--leaf);
+            border: 1px solid rgba(79, 69, 56, 0.14);
+            box-shadow: 0 12px 24px rgba(58, 49, 39, 0.08);
+            overflow: hidden;
+        }
+
+        details.node > summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            position: relative;
+        }
+
+        details.node > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.node > summary::after {
+            content: "+";
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        details.node[open] > summary::after {
+            content: "–";
+        }
+
+        .card-body {
+            padding: 12px 14px 14px;
+            border-top: 1px solid rgba(79, 69, 56, 0.08);
+            color: var(--muted);
+            line-height: 1.4;
+            font-size: 0.95rem;
+            white-space: normal;
+        }
+
+        .tag {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            background: rgba(255, 255, 255, 0.16);
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .root > summary {
+            background: var(--root);
+            color: #f8fbfd;
+        }
+
+        .object > summary {
+            background: var(--object);
+            color: #f8fff2;
+        }
+
+        .attribute > summary {
+            background: var(--attribute);
+            color: #fff7f2;
+        }
+
+        .data > summary {
+            background: var(--data);
+            color: #faf5ff;
+        }
+
+        .leaf > summary {
+            background: linear-gradient(180deg, #fbfaf7 0%, #f5f0e8 100%);
+            color: var(--ink);
+        }
+
+        .leaf > summary::after {
+            color: var(--muted);
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+        .pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(79, 69, 56, 0.12);
+            background: #fff;
+        }
+
+        @media (max-width: 980px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                position: static;
+            }
+
+            .viewport {
+                min-height: 72vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <aside class="panel">
+            <h1>Parse Tree</h1>
+            <p class="lede">
+                A zoomable view of the current possibilities hierarchy for your language parser.
+                Drag to pan. Scroll to zoom. Open or collapse any branch.
+            </p>
+
+            <div class="controls">
+                <button id="zoomIn" type="button">Zoom In</button>
+                <button id="zoomOut" type="button">Zoom Out</button>
+                <button id="resetView" type="button">Reset View</button>
+                <button id="expandAll" type="button">Expand All</button>
+                <button id="collapseData" type="button">Collapse Data Depth</button>
+            </div>
+
+            <div class="mini">
+                <div><strong>Top split:</strong> object, attribute, data.</div>
+                <div><strong>Simple branches:</strong> object and attribute stay close to metadata CRUD.</div>
+                <div><strong>Complicated branch:</strong> data carries scope, selection, operation, and final action.</div>
+            </div>
+
+            <div class="legend">
+                <span class="pill">Blue: root</span>
+                <span class="pill">Green: object</span>
+                <span class="pill">Orange: attribute</span>
+                <span class="pill">Purple: data</span>
+                <span class="pill">Light: leaf / detail</span>
+            </div>
+        </aside>
+
+        <section class="viewport" id="viewport">
+            <div class="canvas" id="canvas">
+                <ul class="tree">
+                    <li>
+                        <details class="node root" open>
+                            <summary>Language Statement</summary>
+                            <div class="card-body">
+                                <span class="tag">top level</span>
+                                First parser question: what layer of the system is this statement trying to manipulate?
+                            </div>
+                        </details>
+                        <ul>
+                            <li>
+                                <details class="node object" open>
+                                    <summary>Object</summary>
+                                    <div class="card-body">
+                                        <span class="tag">metadata CRUD</span>
+                                        Tables / inherited objects. Simpler branch because it is mostly direct metadata management.
+                                    </div>
+                                </details>
+                                <ul>
+                                    <li><details class="node leaf"><summary>Create</summary><div class="card-body">Create a new object, optionally with a parent object.</div></details></li>
+                                    <li><details class="node leaf"><summary>Read</summary><div class="card-body">Read object metadata such as attributes, parent, and row counts.</div></details></li>
+                                    <li><details class="node leaf"><summary>Update</summary><div class="card-body">Rename, attach parent, remove parent, or other metadata updates.</div></details></li>
+                                    <li><details class="node leaf"><summary>Delete</summary><div class="card-body">Delete the object once it is not blocked by child relationships.</div></details></li>
+                                </ul>
+                            </li>
+
+                            <li>
+                                <details class="node attribute" open>
+                                    <summary>Attribute</summary>
+                                    <div class="card-body">
+                                        <span class="tag">metadata CRUD</span>
+                                        Column-like metadata. Mostly direct operations on names, types, and object membership.
+                                    </div>
+                                </details>
+                                <ul>
+                                    <li><details class="node leaf"><summary>Create</summary><div class="card-body">Params: object, attribute name, type.</div></details></li>
+                                    <li><details class="node leaf"><summary>Read</summary><div class="card-body">Params: object, attribute. Returns metadata.</div></details></li>
+                                    <li><details class="node leaf"><summary>Update</summary><div class="card-body">Rename or otherwise change attribute metadata.</div></details></li>
+                                    <li><details class="node leaf"><summary>Delete</summary><div class="card-body">Remove the attribute metadata and its stored data references.</div></details></li>
+                                </ul>
+                            </li>
+
+                            <li>
+                                <details class="node data" open>
+                                    <summary>Data</summary>
+                                    <div class="card-body">
+                                        <span class="tag">scope + selection + operation + CRUD</span>
+                                        Most nuanced branch. Data statements need more than CRUD because they also describe what slice of data is targeted and how.
+                                    </div>
+                                </details>
+                                <ul>
+                                    <li>
+                                        <details class="node data" open>
+                                            <summary>Create</summary>
+                                            <div class="card-body">Insert values or derive new stored data from existing values.</div>
+                                        </details>
+                                        <ul>
+                                            <li><details class="node leaf"><summary>Create Datapoint</summary><div class="card-body">Params: object, attribute, row selector or row id, value.</div></details></li>
+                                            <li><details class="node leaf"><summary>Create Row</summary><div class="card-body">Params: object, values for zero or more attributes.</div></details></li>
+                                            <li><details class="node leaf"><summary>Create Rows</summary><div class="card-body">Params: object, values source.</div></details></li>
+                                            <li><details class="node leaf"><summary>Create Derived Attribute</summary><div class="card-body">Params: object, new attribute, source attributes, optional filter, operation.</div></details></li>
+                                        </ul>
+                                    </li>
+
+                                    <li>
+                                        <details class="node data" open>
+                                            <summary>Read</summary>
+                                            <div class="card-body">Observe one value, one row, many rows, an attribute slice, or an aggregate result.</div>
+                                        </details>
+                                        <ul>
+                                            <li><details class="node leaf"><summary>Read Datapoint</summary><div class="card-body">Params: object, attribute, row selector or row id.</div></details></li>
+                                            <li><details class="node leaf"><summary>Read Row</summary><div class="card-body">Params: object, row selector or row id.</div></details></li>
+                                            <li><details class="node leaf"><summary>Read Rows</summary><div class="card-body">Params: object, optional filter.</div></details></li>
+                                            <li><details class="node leaf"><summary>Read Attribute Slice</summary><div class="card-body">Params: object, attribute, optional filter.</div></details></li>
+                                            <li><details class="node leaf"><summary>Read Aggregate</summary><div class="card-body">Params: object, attribute or attributes, optional filter, operation.</div></details></li>
+                                        </ul>
+                                    </li>
+
+                                    <li>
+                                        <details class="node data" open>
+                                            <summary>Update</summary>
+                                            <div class="card-body">Mutation branch where filtering and transformation become central.</div>
+                                        </details>
+                                        <ul>
+                                            <li><details class="node leaf"><summary>Update Datapoint</summary><div class="card-body">Params: object, attribute, row selector or row id, new value.</div></details></li>
+                                            <li><details class="node leaf"><summary>Update Row</summary><div class="card-body">Params: object, row selector or row id, attribute/value pairs.</div></details></li>
+                                            <li><details class="node leaf"><summary>Update Attribute Slice</summary><div class="card-body">Params: object, attribute, filter, new value or operation.</div></details></li>
+                                            <li><details class="node leaf"><summary>Update Rows</summary><div class="card-body">Params: object, filter, attribute/value pairs.</div></details></li>
+                                            <li><details class="node leaf"><summary>Update Derived Target</summary><div class="card-body">Params: object, target attribute, source attributes, optional filter, operation.</div></details></li>
+                                        </ul>
+                                    </li>
+
+                                    <li>
+                                        <details class="node data" open>
+                                            <summary>Delete</summary>
+                                            <div class="card-body">Still CRUD in essence, but the scope can vary from one cell to many rows.</div>
+                                        </details>
+                                        <ul>
+                                            <li><details class="node leaf"><summary>Delete Datapoint</summary><div class="card-body">Params: object, attribute, row selector or row id.</div></details></li>
+                                            <li><details class="node leaf"><summary>Delete Row</summary><div class="card-body">Params: object, row selector or row id.</div></details></li>
+                                            <li><details class="node leaf"><summary>Delete Rows</summary><div class="card-body">Params: object, filter.</div></details></li>
+                                            <li><details class="node leaf"><summary>Delete Attribute Slice</summary><div class="card-body">Params: object, attribute, optional filter.</div></details></li>
+                                        </ul>
+                                    </li>
+
+                                    <li>
+                                        <details class="node leaf" open>
+                                            <summary>Recurring Questions</summary>
+                                            <div class="card-body">
+                                                <strong>Scope:</strong> datapoint, row, rows, attribute slice, derived result.<br>
+                                                <strong>Selection:</strong> direct row reference, filtered rows, all rows.<br>
+                                                <strong>Operation:</strong> none, assign, aggregate, transform.<br>
+                                                <strong>Final action:</strong> create, read, update, delete.
+                                            </div>
+                                        </details>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const viewport = document.getElementById("viewport");
+        const canvas = document.getElementById("canvas");
+        const detailsNodes = Array.from(document.querySelectorAll("details.node"));
+
+        let scale = 1;
+        let x = 40;
+        let y = 20;
+        let dragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        function applyTransform() {
+            canvas.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+        }
+
+        function clampScale(next) {
+            return Math.min(2.4, Math.max(0.35, next));
+        }
+
+        function zoomAt(clientX, clientY, deltaScale) {
+            const rect = viewport.getBoundingClientRect();
+            const originX = clientX - rect.left;
+            const originY = clientY - rect.top;
+            const nextScale = clampScale(scale * deltaScale);
+            const ratio = nextScale / scale;
+
+            x = originX - (originX - x) * ratio;
+            y = originY - (originY - y) * ratio;
+            scale = nextScale;
+            applyTransform();
+        }
+
+        viewport.addEventListener("wheel", (event) => {
+            event.preventDefault();
+            const factor = event.deltaY < 0 ? 1.12 : 0.9;
+            zoomAt(event.clientX, event.clientY, factor);
+        }, { passive: false });
+
+        viewport.addEventListener("pointerdown", (event) => {
+            dragging = true;
+            viewport.classList.add("dragging");
+            dragStartX = event.clientX - x;
+            dragStartY = event.clientY - y;
+            viewport.setPointerCapture(event.pointerId);
+        });
+
+        viewport.addEventListener("pointermove", (event) => {
+            if (!dragging) return;
+            x = event.clientX - dragStartX;
+            y = event.clientY - dragStartY;
+            applyTransform();
+        });
+
+        function stopDragging(event) {
+            if (!dragging) return;
+            dragging = false;
+            viewport.classList.remove("dragging");
+            if (event) {
+                viewport.releasePointerCapture(event.pointerId);
+            }
+        }
+
+        viewport.addEventListener("pointerup", stopDragging);
+        viewport.addEventListener("pointercancel", stopDragging);
+        viewport.addEventListener("pointerleave", (event) => {
+            if (dragging && event.buttons === 0) {
+                stopDragging(event);
+            }
+        });
+
+        document.getElementById("zoomIn").addEventListener("click", () => {
+            zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, 1.14);
+        });
+
+        document.getElementById("zoomOut").addEventListener("click", () => {
+            zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, 0.88);
+        });
+
+        document.getElementById("resetView").addEventListener("click", () => {
+            scale = 1;
+            x = 40;
+            y = 20;
+            applyTransform();
+        });
+
+        document.getElementById("expandAll").addEventListener("click", () => {
+            detailsNodes.forEach((node) => {
+                node.open = true;
+            });
+        });
+
+        document.getElementById("collapseData").addEventListener("click", () => {
+            detailsNodes.forEach((node) => {
+                if (node.classList.contains("data") || node.classList.contains("leaf")) {
+                    const summary = node.querySelector("summary");
+                    if (summary && summary.textContent !== "Data") {
+                        node.open = false;
+                    }
+                }
+            });
+            document.querySelector(".node.data").open = true;
+        });
+
+        applyTransform();
+    </script>
+</body>
+</html>
