@@ -3,6 +3,6 @@ crud_engine/CrudEngineInterface$AttributeType.class
 memory_allocator/LongBitMap.class
 memory_allocator/LengthBlock.class
 crud_engine/CrudEngine$1.class
-crud_engine/TypeByteConversions.class
 crud_engine/CrudEngineInterface.class
+crud_engine/TypeByteConversions.class
 memory_allocator/BitmapMemoryAllocator.class
