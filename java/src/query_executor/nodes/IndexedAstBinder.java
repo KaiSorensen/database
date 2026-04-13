@@ -421,8 +421,8 @@ public final class IndexedAstBinder {
             if (!(rawRow instanceof List<?> rawValues)) {
                 throw new IllegalArgumentException("Param " + key + " must contain only row lists.");
             }
-            rows.add(List.copyOf(rawValues));
+            rows.add(new ArrayList<>(rawValues));
         }
-        return List.copyOf(rows);
+        return rows;
     }
 }

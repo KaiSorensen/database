@@ -153,6 +153,9 @@ public final class IndexedAstParser {
         if (rawValue.startsWith("\"") && rawValue.endsWith("\"")) {
             return unescapeQuoted(rawValue);
         }
+        if ("null".equals(rawValue)) {
+            return null;
+        }
         if ("true".equals(rawValue) || "false".equals(rawValue)) {
             return Boolean.parseBoolean(rawValue);
         }

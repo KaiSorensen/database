@@ -5,6 +5,14 @@
 /Users/kaisorensen/Code/database/java/src/crud_engine/ObjectSchema.java
 /Users/kaisorensen/Code/database/java/src/crud_engine/TempBaseDemo.java
 /Users/kaisorensen/Code/database/java/src/crud_engine/TypeByteConversions.java
+/Users/kaisorensen/Code/database/java/src/language_parser/LanguageExecutor.java
+/Users/kaisorensen/Code/database/java/src/language_parser/ast/AstNodes.java
+/Users/kaisorensen/Code/database/java/src/language_parser/lexer/Lexer.java
+/Users/kaisorensen/Code/database/java/src/language_parser/lexer/Token.java
+/Users/kaisorensen/Code/database/java/src/language_parser/lexer/TokenType.java
+/Users/kaisorensen/Code/database/java/src/language_parser/lowering/SemanticAstLowerer.java
+/Users/kaisorensen/Code/database/java/src/language_parser/parser/ParseException.java
+/Users/kaisorensen/Code/database/java/src/language_parser/parser/Parser.java
 /Users/kaisorensen/Code/database/java/src/memory_allocator/BitmapMemoryAllocator.java
 /Users/kaisorensen/Code/database/java/src/memory_allocator/LengthBlock.java
 /Users/kaisorensen/Code/database/java/src/memory_allocator/LongBitMap.java
