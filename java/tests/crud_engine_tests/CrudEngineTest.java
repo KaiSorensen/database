@@ -265,6 +265,25 @@ public class CrudEngineTest {
     }
 
     @Test
+    void dumpDatabasePrintsSchemaAndTypedRows() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
+            engine.createObject("People", null);
+            engine.createAttribute("People", "Name", AttributeType.STRING);
+            engine.createAttribute("People", "Age", AttributeType.INT);
+            int rowIndex = engine.insertRow("People");
+            engine.writeString("People", "Name", rowIndex, "Ada");
+            engine.writeInt("People", "Age", rowIndex, 20);
+
+            String dump = engine.dumpDatabase();
+
+            assertTrue(dump.contains("OBJECT people"));
+            assertTrue(dump.contains("- name: STRING"));
+            assertTrue(dump.contains("- age: INT"));
+            assertTrue(dump.contains("[0] name=\"Ada\", age=20"));
+        }
+    }
+
+    @Test
     void deleteObjectWithChildThrowsAndKeepsObject() throws Exception {
         try (CrudEngine engine = newEngine(tempDir.resolve("db"))) {
             engine.createObject("Mammals", null);

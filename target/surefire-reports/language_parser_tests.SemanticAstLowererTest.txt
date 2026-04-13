@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: language_parser_tests.SemanticAstLowererTest
 -------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.044 s -- in language_parser_tests.SemanticAstLowererTest
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.053 s -- in language_parser_tests.SemanticAstLowererTest

@@ -73,6 +73,8 @@ public interface CrudEngineInterface extends AutoCloseable {
 
     void deleteRow(String objectName, int rowIndex) throws IOException;
 
+    String dumpDatabase() throws IOException;
+
     
     // i'm not sure there's more to it. in what layer should we convert between bytes and types?
     // should this class provide a different function for each type and perform the conversions? probably.

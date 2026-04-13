@@ -165,6 +165,33 @@ public class LanguageExecutorIntegrationTest {
         }
     }
 
+    @Test
+    void databaseDumpChangesBetweenCommands() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("lang-trace"))) {
+            LanguageExecutor executor = new LanguageExecutor(engine);
+
+            executor.execute("create_object(people);");
+            String afterObject = engine.dumpDatabase();
+
+            executor.execute("create_attribute(people, name, string);");
+            String afterNameAttribute = engine.dumpDatabase();
+
+            executor.execute("create_attribute(people, age, int);");
+            executor.execute("create_rows(people, values(row(name(\"Ada\"), age(20)), row(name(\"Bob\"), age(30))));");
+            String afterRows = engine.dumpDatabase();
+
+            executor.execute("update(people, set(age, add(age, age)), where(greater_than(age, 20)));");
+            String afterUpdate = engine.dumpDatabase();
+
+            assertTrue(afterObject.contains("OBJECT people"));
+            assertTrue(afterObject.contains("ATTRIBUTES: (none)"));
+            assertTrue(afterNameAttribute.contains("- name: STRING"));
+            assertTrue(afterRows.contains("[0] name=\"Ada\", age=20"));
+            assertTrue(afterRows.contains("[1] name=\"Bob\", age=30"));
+            assertTrue(afterUpdate.contains("[1] name=\"Bob\", age=60"));
+        }
+    }
+
     private static CrudEngine newEngine(Path path) throws Exception {
         CrudEngine engine = new CrudEngine(path);
         engine.initialize();

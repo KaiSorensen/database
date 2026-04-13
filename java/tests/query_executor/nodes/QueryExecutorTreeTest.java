@@ -164,6 +164,7 @@ public class QueryExecutorTreeTest {
             @Override public void writeId(String objectName, String attributeName, int rowIndex, UUID value) {}
             @Override public UUID readId(String objectName, String attributeName, int rowIndex) { return null; }
             @Override public void deleteRow(String objectName, int rowIndex) {}
+            @Override public String dumpDatabase() { return "Database\n(empty)\n"; }
             @Override public void close() {}
         };
     }

@@ -1,0 +1,23 @@
+{
+  "schemaVersion" : 1,
+  "objects" : {
+    "people" : {
+      "objectName" : "people",
+      "parentObjectName" : null,
+      "attributes" : {
+        "name" : {
+          "attributeName" : "name",
+          "attributeType" : "STRING"
+        },
+        "age" : {
+          "attributeName" : "age",
+          "attributeType" : "INT"
+        },
+        "bonus" : {
+          "attributeName" : "bonus",
+          "attributeType" : "INT"
+        }
+      }
+    }
+  }
+}

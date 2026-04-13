@@ -389,6 +389,76 @@ public class CrudEngine implements CrudEngineInterface {
     }
 
     @Override
+    public String dumpDatabase() throws IOException {
+        ensureOpen();
+
+        DatabaseSchema schema = loadSchemaInternal();
+        StringBuilder builder = new StringBuilder();
+        builder.append("Database\n");
+        if (schema.getObjects().isEmpty()) {
+            builder.append("(empty)\n");
+            return builder.toString();
+        }
+
+        boolean firstObject = true;
+        for (ObjectSchema objectSchema : schema.getObjects().values()) {
+            if (!firstObject) {
+                builder.append('\n');
+            }
+            firstObject = false;
+
+            String objectName = objectSchema.getObjectName();
+            builder.append("OBJECT ").append(objectName);
+            if (objectSchema.getParentObjectName() != null) {
+                builder.append(" EXTENDS ").append(objectSchema.getParentObjectName());
+            }
+            builder.append('\n');
+
+            builder.append("  ATTRIBUTES");
+            if (objectSchema.getAttributes().isEmpty()) {
+                builder.append(": (none)\n");
+                builder.append("  ROWS (0)\n");
+                continue;
+            }
+            builder.append(":\n");
+            for (AttributeSchema attributeSchema : objectSchema.getAttributes().values()) {
+                builder.append("    - ")
+                    .append(attributeSchema.getAttributeName())
+                    .append(": ")
+                    .append(attributeSchema.getAttributeType())
+                    .append('\n');
+            }
+
+            int rowCount = getRowCountInternal(objectSchema);
+            builder.append("  ROWS (").append(rowCount).append(")\n");
+            for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+                builder.append("    [").append(rowIndex).append("] ");
+                boolean firstAttribute = true;
+                for (AttributeSchema attributeSchema : objectSchema.getAttributes().values()) {
+                    if (!firstAttribute) {
+                        builder.append(", ");
+                    }
+                    firstAttribute = false;
+                    builder.append(attributeSchema.getAttributeName())
+                        .append('=')
+                        .append(renderValue(objectName, attributeSchema, rowIndex));
+                }
+                builder.append('\n');
+            }
+        }
+        return builder.toString();
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return dumpDatabase();
+        } catch (Exception exception) {
+            return "CrudEngine(dump failed: " + exception.getMessage() + ")";
+        }
+    }
+
+    @Override
     public void close() throws IOException {
         if (closed) {
             return;
@@ -501,6 +571,25 @@ public class CrudEngine implements CrudEngineInterface {
             case BOOL -> TypeByteConversions.boolToBytes((Boolean) value);
             case ID -> TypeByteConversions.uuidToBytes((UUID) value);
         };
+    }
+
+    private String renderValue(String objectName, AttributeSchema attributeSchema, int rowIndex) throws IOException {
+        return switch (attributeSchema.getAttributeType()) {
+            case INT -> renderScalar(readInt(objectName, attributeSchema.getAttributeName(), rowIndex));
+            case STRING -> renderScalar(readString(objectName, attributeSchema.getAttributeName(), rowIndex));
+            case BOOL -> renderScalar(readBool(objectName, attributeSchema.getAttributeName(), rowIndex));
+            case ID -> renderScalar(readId(objectName, attributeSchema.getAttributeName(), rowIndex));
+        };
+    }
+
+    private String renderScalar(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof String stringValue) {
+            return "\"" + stringValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        }
+        return String.valueOf(value);
     }
 
     /**
