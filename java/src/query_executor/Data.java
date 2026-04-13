@@ -139,6 +139,54 @@ public final class Data implements DataInterface {
     }
 
     /**
+     * Builds a row-creatable runtime view from inline literal values.
+     * The provided row maps may specify a subset of the object's stored attributes;
+     * any omitted attributes are filled with null in schema order so row creation can
+     * still emit complete CRUD-ready rows.
+     */
+    public static Data fromLiteralRows(
+        String objectName,
+        LinkedHashMap<String, CrudEngineInterface.AttributeType> schemaColumnTypes,
+        List<LinkedHashMap<String, Object>> rowValues
+    ) {
+        LinkedHashMap<String, ColumnData> columns = new LinkedHashMap<>();
+        List<RowBinding> rows = new ArrayList<>();
+        for (int rowIndex = 0; rowIndex < rowValues.size(); rowIndex++) {
+            // Literal rows have result-row identity only; they do not point at stored rows yet.
+            rows.add(new RowBinding(rowIndex, Map.of()));
+        }
+
+        for (Map.Entry<String, CrudEngineInterface.AttributeType> entry : schemaColumnTypes.entrySet()) {
+            String attributeName = entry.getKey();
+            String qualifiedColumnName = qualifyColumnName(objectName, attributeName);
+            List<CellValue> values = new ArrayList<>();
+            for (LinkedHashMap<String, Object> rowValue : rowValues) {
+                values.add(new CellValue(rowValue.get(attributeName), null));
+            }
+            columns.put(
+                qualifiedColumnName,
+                new ColumnData(
+                    qualifiedColumnName,
+                    objectName,
+                    attributeName,
+                    entry.getValue(),
+                    ValueOrigin.DERIVED,
+                    values
+                )
+            );
+        }
+
+        return new Data(
+            Set.of(objectName),
+            rows,
+            columns,
+            false,
+            Map.of(objectName, new ArrayList<>(schemaColumnTypes.keySet())),
+            Map.of(objectName, List.of())
+        );
+    }
+
+    /**
      * Loads one stored object through the CRUD layer and converts it into the executor's
      * tabular runtime representation. This gives query-executor tests a direct path from
      * persisted database state into Data without bypassing the CRUD engine.
@@ -473,12 +521,6 @@ public final class Data implements DataInterface {
         // Every stored attribute for the object must be present in the working set.
         for (String attributeName : universe) {
             if (!columns.containsKey(qualifyColumnName(objectName, attributeName))) {
-                return false;
-            }
-        }
-        // Every result row must still map to a stored row under the target object.
-        for (RowBinding row : rows) {
-            if (row.sourceRowIndexForObject(objectName) == null) {
                 return false;
             }
         }

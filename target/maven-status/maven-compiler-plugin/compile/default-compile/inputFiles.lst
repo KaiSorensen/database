@@ -49,6 +49,7 @@
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/DataUpdateNode.java
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/IndexedAstBinder.java
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/JoinNode.java
+/Users/kaisorensen/Code/database/java/src/query_executor/nodes/LiteralRowsNode.java
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/Node.java
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/ObjectCreateNode.java
 /Users/kaisorensen/Code/database/java/src/query_executor/nodes/ObjectDeleteNode.java

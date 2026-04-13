@@ -77,6 +77,23 @@ public class QueryExecutorAstIntegrationTest {
     }
 
     @Test
+    void executesCreateLiteralRowsAst() throws Exception {
+        try (CrudEngine engine = newEngine(tempDir.resolve("db-create-literal-row"))) {
+            seedPeople(engine);
+            QueryExecutionResult result = new QueryExecutor(engine).executeAstText(createLiteralRowsAst());
+
+            assertTrue(result.success());
+            assertEquals(5, engine.getRowCount("People"));
+            assertEquals("Dora", engine.readString("People", "Name", 3));
+            assertEquals(40, engine.readInt("People", "Age", 3));
+            assertEquals(11, engine.readInt("People", "Bonus", 3));
+            assertEquals("Evan", engine.readString("People", "Name", 4));
+            assertEquals(21, engine.readInt("People", "Age", 4));
+            assertEquals(3, engine.readInt("People", "Bonus", 4));
+        }
+    }
+
+    @Test
     void executesCreateDerivedColumnAst() throws Exception {
         try (CrudEngine engine = newEngine(tempDir.resolve("db-create-col"))) {
             seedPeople(engine);
@@ -363,6 +380,25 @@ public class QueryExecutorAstIntegrationTest {
             params:
             - objectName: people
             - attributes: [people.bonus]
+            """;
+    }
+
+    private static String createLiteralRowsAst() {
+        return """
+            Node 0
+            type: DataCreate
+            childRoles:
+            - valueExpression: 1
+            params:
+            - objectName: people
+            - targetNames: [people.name, people.age, people.bonus]
+
+            Node 1
+            type: LiteralRows
+            params:
+            - objectName: people
+            - columnNames: [name, age, bonus]
+            - rows: [["Dora", 40, 11], ["Evan", 21, 3]]
             """;
     }
 

@@ -43,6 +43,7 @@ public final class IndexedAstBinder {
             case DataUpdate -> new DataUpdateNode();
             case DataDelete -> new DataDeleteNode();
             case Selection -> new SelectionNode();
+            case LiteralRows -> new LiteralRowsNode();
             case RowOperation -> new RowOperationNode();
             case ColumnOperation -> new ColumnOperationNode();
             case Join -> new JoinNode();
@@ -67,6 +68,7 @@ public final class IndexedAstBinder {
             case DataUpdate -> populateDataUpdate((DataUpdateNode) node, params);
             case DataDelete -> populateDataDelete((DataDeleteNode) node, params);
             case Selection -> populateSelection((SelectionNode) node, params);
+            case LiteralRows -> populateLiteralRows((LiteralRowsNode) node, params);
             case RowOperation -> populateRowOperation((RowOperationNode) node, params);
             case ColumnOperation -> populateColumnOperation((ColumnOperationNode) node, params);
             case Join -> populateJoin((JoinNode) node, params);
@@ -161,8 +163,10 @@ public final class IndexedAstBinder {
             node.selectionChild = selectionNode;
         } else if (child instanceof RowOperationNode rowOperationNode) {
             node.rowOperationChild = rowOperationNode;
+        } else if (child instanceof LiteralRowsNode literalRowsNode) {
+            node.literalRowsChild = literalRowsNode;
         } else {
-            throw new IllegalArgumentException("DataCreate valueExpression must be Selection or RowOperation.");
+            throw new IllegalArgumentException("DataCreate valueExpression must be Selection, RowOperation, or LiteralRows.");
         }
     }
 
@@ -329,6 +333,12 @@ public final class IndexedAstBinder {
         }
     }
 
+    private void populateLiteralRows(LiteralRowsNode node, Map<String, Object> params) {
+        node.objectName = requiredString(params, "objectName");
+        node.columnNames = requiredStringList(params, "columnNames");
+        node.rows = requiredRowValues(params, "rows");
+    }
+
     private void populateRowOperation(RowOperationNode node, Map<String, Object> params) {
         node.operationKind = RowOperationKind.valueOf(requiredString(params, "operationKind"));
         node.sourceNames = requiredStringList(params, "sourceNames");
@@ -399,5 +409,20 @@ public final class IndexedAstBinder {
             values.add(stringEntry);
         }
         return List.copyOf(values);
+    }
+
+    private List<List<Object>> requiredRowValues(Map<String, Object> params, String key) {
+        Object value = params.get(key);
+        if (!(value instanceof List<?> rawRows) || rawRows.isEmpty()) {
+            throw new IllegalArgumentException("Missing required list param: " + key);
+        }
+        List<List<Object>> rows = new ArrayList<>();
+        for (Object rawRow : rawRows) {
+            if (!(rawRow instanceof List<?> rawValues)) {
+                throw new IllegalArgumentException("Param " + key + " must contain only row lists.");
+            }
+            rows.add(List.copyOf(rawValues));
+        }
+        return List.copyOf(rows);
     }
 }

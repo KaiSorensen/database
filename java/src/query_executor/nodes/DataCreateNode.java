@@ -12,6 +12,9 @@ public class DataCreateNode extends DataStatementNode {
     // One-source create path.
     protected RowOperationNode rowOperationChild;
 
+    // One-source create path.
+    protected LiteralRowsNode literalRowsChild;
+
     protected List<String> targetNames;
     protected String createdColumnName;
 
@@ -24,7 +27,8 @@ public class DataCreateNode extends DataStatementNode {
         ValidationResult childValidation = requireExactlyOne(
             "DataCreateNode",
             selectionChild,
-            rowOperationChild
+            rowOperationChild,
+            literalRowsChild
         );
         if (!childValidation.isValid()) {
             return childValidation;
@@ -35,7 +39,10 @@ public class DataCreateNode extends DataStatementNode {
         if (selectionChild != null) {
             return validateChild(selectionChild);
         }
-        return validateChild(rowOperationChild);
+        if (rowOperationChild != null) {
+            return validateChild(rowOperationChild);
+        }
+        return validateChild(literalRowsChild);
     }
 
     @Override
@@ -44,7 +51,13 @@ public class DataCreateNode extends DataStatementNode {
         if (!validation.isValid()) {
             throw new IllegalStateException(validation.message());
         }
-        dataContext = selectionChild != null ? executeChild(selectionChild) : executeChild(rowOperationChild);
+        if (selectionChild != null) {
+            dataContext = executeChild(selectionChild);
+        } else if (rowOperationChild != null) {
+            dataContext = executeChild(rowOperationChild);
+        } else {
+            dataContext = executeChild(literalRowsChild);
+        }
         boolean creatableAsRows = dataContext.isCreatableAsRows(objectName);
         boolean creatableAsColumns = dataContext.isCreatableAsColumns(objectName);
         if (!creatableAsRows && !creatableAsColumns) {

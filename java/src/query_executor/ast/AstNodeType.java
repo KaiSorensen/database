@@ -14,6 +14,7 @@ public enum AstNodeType {
     DataUpdate,
     DataDelete,
     Selection,
+    LiteralRows,
     RowOperation,
     ColumnOperation,
     Join

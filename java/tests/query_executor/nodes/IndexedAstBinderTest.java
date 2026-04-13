@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import query_executor.ast.AstDocument;
 import query_executor.ast.IndexedAstParser;
@@ -172,5 +173,33 @@ public class IndexedAstBinderTest {
         );
 
         assertThrows(IllegalArgumentException.class, () -> binder.bind(document));
+    }
+
+    @Test
+    void bindsDataCreateLiteralRowsTree() {
+        AstDocument document = parser.parse(
+            """
+            Node 0
+            type: DataCreate
+            childRoles:
+            - valueExpression: 1
+            params:
+            - objectName: people
+            - targetNames: [people.name, people.age, people.bonus]
+
+            Node 1
+            type: LiteralRows
+            params:
+            - objectName: people
+            - columnNames: [name, age, bonus]
+            - rows: [["Bob", 30, 7], ["Cara", 25, 9]]
+            """
+        );
+
+        Node root = binder.bind(document);
+
+        assertInstanceOf(DataCreateNode.class, root);
+        assertInstanceOf(LiteralRowsNode.class, ((DataCreateNode) root).literalRowsChild);
+        assertEquals(List.of("name", "age", "bonus"), ((DataCreateNode) root).literalRowsChild.columnNames);
     }
 }

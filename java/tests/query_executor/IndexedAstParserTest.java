@@ -88,4 +88,32 @@ public class IndexedAstParserTest {
 
         assertTrue(exception.getMessage().contains("filter"));
     }
+
+    @Test
+    void parsesLiteralRowsNestedLists() {
+        AstDocument document = parser.parse(
+            """
+            Node 0
+            type: DataCreate
+            childRoles:
+            - valueExpression: 1
+            params:
+            - objectName: people
+            - targetNames: [people.name, people.age, people.bonus]
+
+            Node 1
+            type: LiteralRows
+            params:
+            - objectName: people
+            - columnNames: [name, age, bonus]
+            - rows: [["Bob", 30, 7], ["Cara", 25, 9]]
+            """
+        );
+
+        AstNodeRecord literalRows = document.node(1);
+
+        assertEquals(AstNodeType.LiteralRows, literalRows.nodeType());
+        assertEquals(List.of("name", "age", "bonus"), literalRows.params().get("columnNames"));
+        assertEquals(List.of(List.of("Bob", 30, 7), List.of("Cara", 25, 9)), literalRows.params().get("rows"));
+    }
 }
