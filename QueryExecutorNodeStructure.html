@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Executor Node Structure</title>
+    <style>
+        :root {
+            --bg: #f3efe6;
+            --paper: rgba(255, 252, 246, 0.9);
+            --ink: #201d19;
+            --muted: #655f58;
+            --line: #cabfae;
+            --data: #204b57;
+            --meta: #7c3b18;
+            --op: #4f4d96;
+            --sel: #446327;
+            --warn: #8b2e2e;
+            --shadow: 0 18px 44px rgba(42, 36, 29, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+            background:
+                radial-gradient(circle at top left, rgba(32, 75, 87, 0.08), transparent 24%),
+                radial-gradient(circle at top right, rgba(79, 77, 150, 0.08), transparent 24%),
+                linear-gradient(180deg, #fbf8f2 0%, var(--bg) 100%);
+        }
+
+        main {
+            max-width: 1220px;
+            margin: 0 auto;
+            padding: 28px 24px 56px;
+        }
+
+        header {
+            margin-bottom: 26px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(2.3rem, 3.5vw, 3.6rem);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+        }
+
+        .lede {
+            max-width: 860px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+
+        .panel,
+        .section {
+            background: var(--paper);
+            border: 1px solid rgba(90, 79, 65, 0.14);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel {
+            align-self: start;
+            position: sticky;
+            top: 24px;
+            padding: 20px 18px;
+        }
+
+        .panel h2,
+        .section h2 {
+            margin: 0 0 10px;
+            font-size: 1.2rem;
+        }
+
+        .panel p,
+        .section p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .legend {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 0.96rem;
+        }
+
+        .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            flex: none;
+        }
+
+        .content {
+            display: grid;
+            gap: 20px;
+        }
+
+        .section {
+            padding: 20px;
+        }
+
+        .tree {
+            display: grid;
+            gap: 18px;
+        }
+
+        .branch {
+            border: 1px solid rgba(90, 79, 65, 0.12);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.64);
+            padding: 16px;
+        }
+
+        .node {
+            border-left: 4px solid var(--line);
+            padding: 8px 0 8px 14px;
+            margin-left: 12px;
+        }
+
+        .node.root {
+            margin-left: 0;
+            border-left: 0;
+            padding-left: 0;
+        }
+
+        .label {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.82rem;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .meta { background: var(--meta); }
+        .data { background: var(--data); }
+        .sel { background: var(--sel); }
+        .op { background: var(--op); }
+        .warn { background: var(--warn); }
+
+        .title {
+            margin: 0 0 4px;
+            font-size: 1rem;
+        }
+
+        .desc {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .card {
+            border: 1px solid rgba(90, 79, 65, 0.12);
+            border-radius: 18px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 0.98rem;
+        }
+
+        .card ul,
+        .section ul {
+            margin: 10px 0 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .flow {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .flow-step {
+            border-left: 4px solid var(--line);
+            padding-left: 12px;
+        }
+
+        pre {
+            margin: 14px 0 0;
+            padding: 14px;
+            overflow: auto;
+            border-radius: 16px;
+            background: #1f1c18;
+            color: #f6f0e5;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Query Executor Node Structure</h1>
+            <p class="lede">
+                This page summarizes the current query-executor parse tree as it exists in the codebase.
+                The tree itself is the executor. Each node validates its structure, delegates tabular shape logic into
+                <code>Data</code>, and then either returns read results or commits mutations through the CRUD layer.
+            </p>
+        </header>
+
+        <div class="layout">
+            <aside class="panel">
+                <h2>Reading Guide</h2>
+                <p>
+                    The metadata branches stay simple. The data branch is where selection, row-wise operations,
+                    column-wise operations, joins, and CRUD validation live. Update is intentionally split into
+                    two semantic roles: choosing target rows and computing replacement values.
+                </p>
+
+                <div class="legend">
+                    <div class="legend-item"><span class="swatch" style="background: var(--meta);"></span> Metadata statements</div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--data);"></span> Data CRUD roots</div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--sel);"></span> Selection / targeting</div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--op);"></span> Value-producing operations</div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--warn);"></span> Mutation-only rules</div>
+                </div>
+            </aside>
+
+            <div class="content">
+                <section class="section">
+                    <h2>Top-Level Structure</h2>
+                    <div class="tree">
+                        <div class="branch">
+                            <div class="node root">
+                                <span class="label meta">Metadata</span>
+                                <h3 class="title">Object Query</h3>
+                                <p class="desc">Object CRUD nodes manage object metadata. They do not use the tabular data branch.</p>
+                            </div>
+                            <div class="node">
+                                <span class="label meta">Object</span>
+                                <h3 class="title">ObjectCreateNode / ObjectReadNode / ObjectUpdateNode / ObjectDeleteNode</h3>
+                                <p class="desc">These stay close to the CRUD engine’s schema-level operations.</p>
+                            </div>
+                        </div>
+
+                        <div class="branch">
+                            <div class="node root">
+                                <span class="label meta">Metadata</span>
+                                <h3 class="title">Attribute Query</h3>
+                                <p class="desc">Attribute CRUD nodes manage attribute metadata, including adding or removing stored columns.</p>
+                            </div>
+                            <div class="node">
+                                <span class="label meta">Attribute</span>
+                                <h3 class="title">AttributeCreateNode / AttributeReadNode / AttributeUpdateNode / AttributeDeleteNode</h3>
+                                <p class="desc">These operate on object-attribute definitions rather than on row data.</p>
+                            </div>
+                        </div>
+
+                        <div class="branch">
+                            <div class="node root">
+                                <span class="label data">Data</span>
+                                <h3 class="title">Data Query</h3>
+                                <p class="desc">Data CRUD nodes own the executable subtree that works with selections, operations, joins, and mutation validation.</p>
+                            </div>
+                            <div class="node">
+                                <span class="label data">CRUD Roots</span>
+                                <h3 class="title">DataReadNode / DataCreateNode / DataUpdateNode / DataDeleteNode</h3>
+                                <p class="desc">These are the roots that decide whether the subtree is used for reading, creating, updating, or deleting.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Data Branch</h2>
+                    <div class="grid">
+                        <article class="card">
+                            <h3><span class="label sel">Selection</span></h3>
+                            <p class="desc">
+                                <strong>SelectionNode</strong> projects columns and applies filter expressions. It is the most common leaf-like
+                                node in the data branch, even though it still transforms the current <code>Data</code> view.
+                            </p>
+                            <ul>
+                                <li>Input: current <code>Data</code> context</li>
+                                <li>Output: filtered/projected <code>Data</code></li>
+                                <li>Validation: selected columns exist, filter columns exist</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label op">Row Operation</span></h3>
+                            <p class="desc">
+                                <strong>RowOperationNode</strong> computes one derived column. It can consume one child result or merge two child
+                                results when their row bindings match exactly.
+                            </p>
+                            <ul>
+                                <li>Unary or binary input</li>
+                                <li>Produces one derived column</li>
+                                <li>Exact row-set match is required for binary non-join paths</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label op">Column Operation</span></h3>
+                            <p class="desc">
+                                <strong>ColumnOperationNode</strong> reduces one column to one scalar. The scalar is still represented as a
+                                one-row, one-column <code>Data</code> object.
+                            </p>
+                            <ul>
+                                <li>Consumes a single-column input</li>
+                                <li>Produces a scalar-shaped <code>Data</code></li>
+                                <li>Can also merge two child results before reduction when row bindings match</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label op">Join</span></h3>
+                            <p class="desc">
+                                <strong>JoinNode</strong> makes row-shape reconciliation explicit. It is the escape hatch when two branches do not
+                                already share the same row bindings.
+                            </p>
+                            <ul>
+                                <li>Current join mode: <code>INNER</code></li>
+                                <li>Current key shape: one key column per side</li>
+                                <li>Output rows carry bindings from both joined objects</li>
+                            </ul>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>CRUD Root Shapes</h2>
+                    <div class="flow">
+                        <div class="flow-step">
+                            <span class="label data">DataRead</span>
+                            <p class="desc">
+                                One active child path among selection, row operation, column operation, or join.
+                                The result only needs to be readable.
+                            </p>
+                        </div>
+
+                        <div class="flow-step">
+                            <span class="label data">DataCreate</span>
+                            <p class="desc">
+                                One active child path among selection or row operation. A selection-shaped result can become full rows.
+                                A row-operation result can become a new stored column.
+                            </p>
+                        </div>
+
+                        <div class="flow-step">
+                            <span class="label data">DataDelete</span>
+                            <p class="desc">
+                                One active child path among selection or row operation. The result must validate as a full row set or a full column set
+                                before deletion begins.
+                            </p>
+                        </div>
+
+                        <div class="flow-step">
+                            <span class="label warn">DataUpdate</span>
+                            <p class="desc">
+                                This root is different. It has two semantic branches:
+                                one branch chooses the stored rows to update, and another branch computes the replacement values.
+                            </p>
+                            <pre>DataUpdate
+├── targetSelectionChild
+└── valueExpressionChild
+    ├── valueSelectionChild
+    ├── valueRowOperationChild
+    ├── valueColumnOperationChild
+    └── valueJoinChild</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Update Rules</h2>
+                    <div class="grid">
+                        <article class="card">
+                            <h3><span class="label warn">Target Selection</span></h3>
+                            <p class="desc">
+                                The target branch must identify real stored rows for the object being updated. This is where row identity comes from.
+                            </p>
+                            <ul>
+                                <li>The target result must still bind to stored row indexes</li>
+                                <li>The update does not infer targets from the value branch</li>
+                                <li>If the target rows are ambiguous, the update fails</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label warn">Scalar Broadcast</span></h3>
+                            <p class="desc">
+                                If the value branch returns a scalar, that scalar may update one target attribute across every selected target row.
+                            </p>
+                            <ul>
+                                <li>Value shape must be exactly one row and one column</li>
+                                <li>Exactly one target attribute is allowed</li>
+                                <li>The same value is written to every targeted row</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label warn">Per-Row Replacement</span></h3>
+                            <p class="desc">
+                                If the value branch is not scalar, it must fit the target shape exactly.
+                            </p>
+                            <ul>
+                                <li>Exact row-binding match with the target selection</li>
+                                <li>One produced column per target attribute</li>
+                                <li>No write begins unless the fit check succeeds</li>
+                            </ul>
+                        </article>
+
+                        <article class="card">
+                            <h3><span class="label warn">Safe Failure</span></h3>
+                            <p class="desc">
+                                The design intentionally avoids rollback code. Instead, update requests are staged and type-checked before the first write.
+                            </p>
+                            <ul>
+                                <li>Shape fit is validated first</li>
+                                <li>Target attribute types are checked before commit</li>
+                                <li>If any check fails, nothing is written</li>
+                            </ul>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Current Testing Coverage</h2>
+                    <div class="grid">
+                        <article class="card">
+                            <h3>In-Memory Executor Tests</h3>
+                            <p class="desc">
+                                The executor is tested directly against in-memory <code>Data</code> fixtures for filtering, operations, joins,
+                                and tree execution.
+                            </p>
+                        </article>
+
+                        <article class="card">
+                            <h3>Persisted Integration Tests</h3>
+                            <p class="desc">
+                                Query-executor integration tests seed data through <code>CrudEngine</code>, load it with <code>Data.fromCrudEngine(...)</code>,
+                                execute a root tree, and assert on the real persisted database state.
+                            </p>
+                        </article>
+
+                        <article class="card">
+                            <h3>Mutation Coverage</h3>
+                            <p class="desc">
+                                Current integration coverage includes row create, derived-column create, row-aligned update, scalar broadcast update,
+                                row delete, and column delete.
+                            </p>
+                        </article>
+
+                        <article class="card">
+                            <h3>Wrapper Readiness</h3>
+                            <p class="desc">
+                                A future query-executor wrapper can simplify orchestration, but the parse tree and the runtime data model are already
+                                testable as they stand today.
+                            </p>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

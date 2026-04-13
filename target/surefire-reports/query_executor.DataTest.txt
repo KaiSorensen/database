@@ -1,0 +1,236 @@
+-------------------------------------------------------------------------------
+Test set: query_executor.DataTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 8, Skipped: 0, Time elapsed: 0.025 s <<< FAILURE! -- in query_executor.DataTest
+query_executor.DataTest.columnOperationProducesScalarAsOneRowOneColumnTable -- Time elapsed: 0.004 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.applySelectionSupportsNestedBooleanFilters -- Time elapsed: 0.001 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.innerJoinProducesMergedRowsAndColumns -- Time elapsed: 0 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.fullRowAndColumnValidationsRespectObjectUniverse -- Time elapsed: 0.001 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.rowOperationNodeRejectsMismatchedDualInputsWithoutJoin -- Time elapsed: 0 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.exactRowSetMatchDetectsDifferentFilteredResults -- Time elapsed: 0 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.joinNodeMakesAmbiguousDualInputBehaviorExplicit -- Time elapsed: 0 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+query_executor.DataTest.rowOperationProducesSingleDerivedColumn -- Time elapsed: 0.001 s <<< ERROR!
+java.lang.Error: 
+Unresolved compilation problems: 
+	The declared package "query_executor.nodes" does not match the expected package "query_executor"
+	RowOperationKind cannot be resolved to a variable
+	ColumnOperationKind cannot be resolved to a variable
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationNode cannot be resolved to a type
+	RowOperationKind cannot be resolved to a variable
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	DataReadNode cannot be resolved to a type
+	SelectionNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+	JoinNode cannot be resolved to a type
+
+	at query_executor.DataTest.<init>(DataTest.java:1)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

@@ -1,2 +1,8 @@
 /Users/kaisorensen/Code/database/java/tests/crud_engine_tests/CrudEngineTest.java
 /Users/kaisorensen/Code/database/java/tests/memory_allocator_tests/BitmapMemoryAllocatorTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/IndexedAstParserTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/QueryExecutorAstIntegrationTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/nodes/DataTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/nodes/IndexedAstBinderTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/nodes/QueryExecutorIntegrationTest.java
+/Users/kaisorensen/Code/database/java/tests/query_executor/nodes/QueryExecutorTreeTest.java

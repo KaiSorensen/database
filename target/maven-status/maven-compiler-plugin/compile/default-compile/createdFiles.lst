@@ -1,8 +1,11 @@
+query_executor/nodes/DataStatementNode$1.class
 memory_allocator/MemoryAllocatorInterface.class
 crud_engine/CrudEngineInterface$AttributeType.class
+crud_engine/CrudEngineInterface.class
+query_executor/nodes/IndexedAstBinder$1.class
+query_executor/Data$1.class
 memory_allocator/LongBitMap.class
 memory_allocator/LengthBlock.class
 crud_engine/CrudEngine$1.class
-crud_engine/CrudEngineInterface.class
 crud_engine/TypeByteConversions.class
 memory_allocator/BitmapMemoryAllocator.class

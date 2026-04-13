@@ -1,1 +1,2 @@
+query_executor/nodes/DataTest.class
 memory_allocator_tests/BitmapMemoryAllocatorTest.class
