@@ -1,0 +1,81 @@
+{
+  "schemaVersion" : 1,
+  "objects" : {
+    "people" : {
+      "objectName" : "people",
+      "parentObjectName" : null,
+      "attributes" : {
+        "name" : {
+          "attributeName" : "name",
+          "attributeType" : "STRING"
+        },
+        "age" : {
+          "attributeName" : "age",
+          "attributeType" : "INT"
+        }
+      }
+    },
+    "demo_people" : {
+      "objectName" : "demo_people",
+      "parentObjectName" : null,
+      "attributes" : {
+        "name" : {
+          "attributeName" : "name",
+          "attributeType" : "STRING"
+        },
+        "age" : {
+          "attributeName" : "age",
+          "attributeType" : "INT"
+        },
+        "bonus" : {
+          "attributeName" : "bonus",
+          "attributeType" : "INT"
+        }
+      }
+    },
+    "demo_employees" : {
+      "objectName" : "demo_employees",
+      "parentObjectName" : "demo_people",
+      "attributes" : {
+        "name" : {
+          "attributeName" : "name",
+          "attributeType" : "STRING"
+        },
+        "age" : {
+          "attributeName" : "age",
+          "attributeType" : "INT"
+        },
+        "bonus" : {
+          "attributeName" : "bonus",
+          "attributeType" : "INT"
+        }
+      }
+    },
+    "showcase_people" : {
+      "objectName" : "showcase_people",
+      "parentObjectName" : null,
+      "attributes" : {
+        "name" : {
+          "attributeName" : "name",
+          "attributeType" : "STRING"
+        },
+        "age" : {
+          "attributeName" : "age",
+          "attributeType" : "INT"
+        },
+        "bonus" : {
+          "attributeName" : "bonus",
+          "attributeType" : "INT"
+        },
+        "salary" : {
+          "attributeName" : "salary",
+          "attributeType" : "INT"
+        },
+        "years_at_company" : {
+          "attributeName" : "years_at_company",
+          "attributeType" : "INT"
+        }
+      }
+    }
+  }
+}
